@@ -1,0 +1,8 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Support inbox</h1>
+<div class="panel">
+  {% for m in msgs %}<div class="card" style="margin:8px 0"><b>{{ m['subject'] }}</b> — {{ m['email'] }}<br>{{ m['message']|safe }}</div>
+  {% else %}<p class="muted">No messages.</p>{% endfor %}
+</div>
+{% endblock %}

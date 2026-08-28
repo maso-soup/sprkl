@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}<h1>Referrals</h1>
+<div class="dash">{% set active='referrals' %}{% include "_acct_side.html" with context %}
+<div class="panel">
+  <p>Your referral code: <code>{{ code }}</code> — share it and earn $5 credit per friend.</p>
+  <p class="muted">Share link: <code>/ref-landing?ref={{ code }}</code></p>
+  <h3>Redeem a referral code</h3>
+  <form class="ajax" method="post" action="/retail/referral/redeem" style="display:flex;gap:6px">
+    <input name="code" value="{{ code }}"><button class="btn sm">Redeem</button></form>
+</div></div>{% endblock %}

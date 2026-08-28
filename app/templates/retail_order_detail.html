@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Order #{{ oid }}</h1>
+<div class="dash">{% set active='orders' %}{% include "_acct_side.html" with context %}
+<div class="panel">
+{% if o %}
+  <p>Status: <b>{{ o['status'] }}</b> · Total: <b>${{ '%.2f'|format(o['total']) }}</b> · Ref: <code>{{ o['ref'] }}</code></p>
+{% else %}<p class="muted">Order not found.</p>{% endif %}
+  <p style="margin-top:12px">
+    <a class="btn sm" href="/retail/orders/{{ oid }}/invoice">View invoice</a>
+    <a class="btn sm ghost" href="/retail/track?ref={{ o['ref'] if o else '' }}">Track</a>
+  </p>
+  <h3 style="margin-top:16px">Download invoice file</h3>
+  <form class="ajax" method="get" action="/retail/invoices/download" style="display:flex;gap:6px">
+    <input name="file" value="INV-{{ oid }}.txt"><button class="btn sm">Download</button></form>
+</div></div>
+{% endblock %}

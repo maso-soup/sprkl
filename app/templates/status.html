@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>System Status</h1>
+<div class="card">
+  <p><b>All systems operational.</b></p>
+  <p class="muted">Storefront powered by <code>SprklKit/1.0.0</code>. See the <code>X-Powered-By</code> response header for the exact build.</p>
+</div>
+<div class="card" style="margin-top:14px;max-width:480px">
+  <b>Check security advisories</b>
+  <form class="ajax" method="get" action="/api/v2/advisory" style="display:flex;gap:6px;margin-top:8px">
+    <input name="q" placeholder="component or CVE id"><button class="btn sm">Search</button>
+  </form>
+</div>
+{% endblock %}

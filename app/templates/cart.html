@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Your cart</h1>
+{% if not lines %}
+<p class="muted">Your cart is empty. <a href="/products">Browse flavors →</a></p>
+{% else %}
+<table>
+  <tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th><th></th></tr>
+  {% for l in lines %}
+  <tr>
+    <td>{{ l['name'] }}</td>
+    <td>${{ '%.2f'|format(l['price']) }}</td>
+    <td>
+      <form method="post" action="/retail/cart/update" class="qtyform" style="display:flex;gap:6px">
+        <input type="hidden" name="pid" value="{{ l['pid'] }}">
+        <input name="qty" value="{{ l['qty'] }}" size="4">
+        <button class="btn sm ghost">Update</button>
+      </form>
+    </td>
+    <td>${{ '%.2f'|format(l['line_total']) }}</td>
+    <td><form method="post" action="/cart/remove"><input type="hidden" name="pid" value="{{ l['pid'] }}"><button class="btn sm ghost">✕</button></form></td>
+  </tr>
+  {% endfor %}
+  <tr><td colspan="3"></td><td><b>${{ '%.2f'|format(subtotal) }}</b></td><td></td></tr>
+</table>
+
+<div class="card" style="margin-top:18px;max-width:420px">
+  <b>Have a coupon?</b>
+  <form method="post" action="/retail/cart/apply-coupon" style="display:flex;gap:6px;margin-top:8px">
+    <input name="code" placeholder="WELCOME10">
+    <input type="hidden" name="subtotal" value="{{ subtotal }}">
+    <button class="btn sm">Apply</button>
+  </form>
+  <div style="margin-top:10px"><a href="/checkout">Add a gift message / checkout →</a></div>
+</div>
+<div style="margin-top:16px"><a class="btn" href="/checkout">Proceed to checkout</a></div>
+<script>
+document.querySelectorAll('.qtyform').forEach(f=>f.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const r=await fetch('/retail/cart/update',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(new FormData(f))});
+  const d=await r.json(); alert('Line subtotal: $'+d.subtotal);
+}));
+</script>
+{% endif %}
+{% endblock %}

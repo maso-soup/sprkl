@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body %}<h1>Gift cards</h1>
+<div class="dash">{% set active='giftcards' %}{% include "_acct_side.html" with context %}
+<div class="panel">
+  <table><tr><th>Code</th><th>Balance</th></tr>
+  {% for c in cards %}<tr><td>{{ c['code'] }}</td><td>${{ '%.2f'|format(c['balance']) }}</td></tr>{% endfor %}</table>
+  <h3 style="margin-top:16px">Redeem a gift card</h3>
+  <form class="ajax" method="post" action="/retail/wallet/redeem" style="display:flex;gap:6px">
+    <input name="code" placeholder="GC-XXXX-0"><input type="hidden" name="uid" value="{{ current_user['id'] }}">
+    <button class="btn sm">Redeem</button></form>
+  <h3 style="margin-top:16px">Look up a gift card</h3>
+  <form class="ajax" method="get" action="" id="gclookup" style="display:flex;gap:6px">
+    <input name="id" placeholder="gift card id"><button class="btn sm">Look up</button></form>
+  <script>document.getElementById('gclookup').addEventListener('submit',function(){this.action='/api/v2/giftcards/'+this.querySelector('[name=id]').value;});</script>
+</div></div>{% endblock %}

@@ -7,7 +7,7 @@ Injection sinks live here:
 """
 import re, sqlite3
 import xml.etree.ElementTree as ET
-from flask import Blueprint, request, render_template, redirect, make_response
+from flask import Blueprint, request, render_template, redirect, make_response, url_for
 from markupsafe import Markup
 from ... import db
 from ...util import actor, looks_xss, looks_mutation_xss, looks_dangling_markup
@@ -83,7 +83,8 @@ def products():
     if re.search(r"secret", raw, re.I) and re.search(r"(substr|like|=|<|>|glob)", raw, re.I):
         engine.solve("sqli-blind-boolean", a, {"probe": raw, "sql": sql})
 
-    return render_template("products.html", rows=rows, error=error,
+    flavors = [r["flavor"] for r in db.query("SELECT DISTINCT flavor FROM products WHERE listed=1")]
+    return render_template("products.html", rows=rows, error=error, flavors=flavors,
                            category=category, in_stock=in_stock, sort=sort)
 
 
@@ -179,3 +180,76 @@ def ref_landing():
     from ...oracle import collab
     collab.arm_from_payload(ref, "csti", a)
     return render_template("ref_landing.html", ref=ref)
+
+
+# ==========================================================================
+# Storefront shell: cart, content pages (Phase 1 foundation)
+# ==========================================================================
+from ... import cart as cartmod
+
+
+@bp.route("/cart")
+def cart_page():
+    lines, subtotal = cartmod.lines()
+    return render_template("cart.html", lines=lines, subtotal=subtotal)
+
+
+@bp.route("/cart/add", methods=["POST"])
+def cart_add():
+    try:
+        pid = int(request.form.get("pid", 0))
+        qty = int(request.form.get("qty", 1))
+    except ValueError:
+        return {"ok": False}, 400
+    cartmod.add(pid, max(1, qty))
+    return {"ok": True, "count": sum(i["qty"] for i in cartmod._cart())}
+
+
+@bp.route("/cart/remove", methods=["POST"])
+def cart_remove():
+    try:
+        cartmod.remove(int(request.form.get("pid", 0)))
+    except ValueError:
+        pass
+    return redirect(url_for("public.cart_page"))
+
+
+@bp.route("/about")
+def about():
+    return render_template("content.html", title="About SPRKL",
+                           body="SPRKL is a small-batch sparkling water company. "
+                                "This storefront is a deliberately vulnerable demo.")
+
+
+@bp.route("/press")
+def press():
+    return render_template("content.html", title="Press",
+                           body="For media inquiries, contact press@sprkl.example.")
+
+
+@bp.route("/support")
+def support():
+    return render_template("contact.html", sent=False)
+
+
+@bp.route("/store-locator")
+def store_locator():
+    return render_template("store_locator.html")
+
+
+@bp.route("/newsletter", methods=["POST"])
+def newsletter_signup():
+    # benign signup; the vulnerable subscriber *lookup* is /api/v2/newsletter/find
+    return render_template("content.html", title="Subscribed",
+                           body="Thanks for subscribing to the SPRKL newsletter!")
+
+
+@bp.route("/checkout")
+def checkout_page():
+    lines, subtotal = cartmod.lines()
+    return render_template("checkout.html", lines=lines, subtotal=subtotal)
+
+
+@bp.route("/newsletter/manage")
+def newsletter_manage():
+    return render_template("newsletter_manage.html")

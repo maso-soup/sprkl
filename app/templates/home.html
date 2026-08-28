@@ -1,11 +1,33 @@
 {% extends "base.html" %}
+{% from "_macros.html" import can %}
 {% block body %}
-<h1>Sparkling water, elevated.</h1>
-<p>Crisp, bubbly, and endlessly refreshing. Explore our flavors.</p>
+{% if current_user %}
+<div class="hero">
+  <h1>Welcome back, {{ current_user['name'].split(' ')[0] }} 👋</h1>
+  <p>You have {{ current_user['loyalty'] }} loyalty points. Refresh your day with a SPRKL.</p>
+  <a class="btn" href="/retail/dashboard">Go to dashboard</a>
+</div>
+{% else %}
+<div class="hero">
+  <h1>Sparkling water, elevated.</h1>
+  <p>Crisp, bubbly, and endlessly refreshing. Explore our flavors.</p>
+  <a class="btn" href="/products">Shop all flavors</a>
+</div>
+{% endif %}
+<div class="card" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;background:linear-gradient(120deg,#ff6b9d22,#00c2c722)">
+  <div><b>☀️ Summer Fizz Sale</b> — up to 20% off. <a href="/promo">See deals →</a></div>
+  <a class="btn sm" href="/newsletter/manage">Manage subscription</a>
+</div>
+<h2>Popular flavors</h2>
 <div class="grid">
   {% for p in products %}
-  <div class="card"><b>{{ p['name'] }}</b><br><small>{{ p['flavor'] }}</small><br>${{ '%.2f'|format(p['price']) }}
-  <br><a href="/products?category={{ p['flavor'] }}">view</a></div>
+  <div class="card prod">
+    {{ can(p['flavor']) }}
+    <h3><a href="/product/{{ p['id'] }}">{{ p['name'] }}</a></h3>
+    <div class="muted">{{ p['flavor'] }}</div>
+    <div class="price">${{ '%.2f'|format(p['price']) }}</div>
+    <button class="btn sm" data-add-cart="{{ p['id'] }}" style="margin-top:8px">Add to cart</button>
+  </div>
   {% endfor %}
 </div>
 {% endblock %}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SPRKL Admin{% endblock %}</title>
+  <link rel="stylesheet" href="/static/sprkl.css">
+  <style>
+    body{background:#0c1a2b}
+    .adminwrap{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+    .adminside{background:#0a2540;color:#cfe4f5;padding:18px 12px}
+    .adminside .brand{font-weight:800;letter-spacing:2px;font-size:18px;color:#fff;margin-bottom:16px}
+    .adminside a{display:block;color:#9fc7e8;padding:8px 10px;border-radius:8px;font-size:14px}
+    .adminside a:hover,.adminside a.active{background:#123css;background:#12365c;color:#fff;text-decoration:none}
+    .adminmain{background:#eef4fa;padding:26px}
+    .adminmain h1{margin-top:0}
+    .logoutlink{color:#ff9db4}
+  </style>
+</head>
+<body>
+<div class="adminwrap">
+  <div class="adminside">
+    <div class="brand">SPRKL · ADMIN</div>
+    <a href="/admin/console">Dashboard</a>
+    <a href="/admin/inventory">Inventory</a>
+    <a href="/admin/directory">Employees</a>
+    <a href="/admin/users">Users &amp; Roles</a>
+    <a href="/admin/orders">Orders</a>
+    <a href="/admin/integrations">Integrations</a>
+    <a href="/admin/tools">Tools</a>
+    <a href="/admin/themes">Themes</a>
+    <a href="/admin/prefs">Preferences</a>
+    <a href="/admin/inbox">Support Inbox</a>
+    <a class="logoutlink" href="/admin/logout">Log out</a>
+  </div>
+  <div class="adminmain">{% block body %}{% endblock %}</div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

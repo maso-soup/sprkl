@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}<h1>Wallet</h1>
+<div class="dash">{% set active='wallet' %}{% include "_acct_side.html" with context %}
+<div class="panel">
+  <div class="stat"><div class="box"><span class="muted">Balance</span><b>${{ '%.2f'|format(balance) }}</b></div></div>
+  <p style="margin-top:16px"><a class="btn" href="/retail/wallet/transfer">Transfer funds</a></p>
+  <h3>Redeem a gift card to wallet</h3>
+  <form class="ajax" method="post" action="/retail/wallet/redeem" style="display:flex;gap:6px">
+    <input name="code" placeholder="GC-XXXX-0"><input type="hidden" name="uid" value="{{ current_user['id'] }}">
+    <button class="btn sm">Redeem</button></form>
+</div></div>{% endblock %}

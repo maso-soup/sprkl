@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Dashboard</h1>
+<div class="stat">
+  <div class="box"><span class="muted">Loyalty points</span><b>{{ u['loyalty'] }}</b></div>
+  <div class="box"><span class="muted">Orders</span><b>{{ orders|length }}</b></div>
+  <div class="box"><span class="muted">Email</span><b style="font-size:15px">{{ u['email'] }}</b></div>
+</div>
+<div class="dash" style="margin-top:24px">
+  <div class="side">
+    <a href="/retail/dashboard" class="active">Overview</a>
+    <a href="/retail/orders">Orders</a>
+    <a href="/retail/wishlist">Wishlist</a>
+    <a href="/retail/giftcards">Gift Cards</a>
+    <a href="/retail/wallet">Wallet</a>
+    <a href="/retail/referrals">Referrals</a>
+    <a href="/retail/profile">Profile</a>
+    <a href="/retail/security">Security</a>
+  </div>
+  <div class="panel">
+    <h3>Recent orders</h3>
+    {% if orders %}
+    <table><tr><th>Order</th><th>Status</th><th>Total</th><th></th></tr>
+      {% for o in orders %}
+      <tr><td>#{{ o['id'] }}</td><td>{{ o['status'] }}</td><td>${{ '%.2f'|format(o['total']) }}</td>
+      <td><a href="/retail/orders/{{ o['id'] }}/invoice">Invoice</a></td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="muted">No orders yet.</p>{% endif %}
+    <h3 style="margin-top:20px">Recommended for you</h3>
+    <div class="grid">
+      {% for p in recs %}<div class="card prod"><h3><a href="/product/{{ p['id'] }}">{{ p['name'] }}</a></h3>
+      <div class="muted">{{ p['flavor'] }}</div><div class="price">${{ '%.2f'|format(p['price']) }}</div></div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

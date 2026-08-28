@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block body %}
-<h2>Track Order</h2>
-<form method="get"><input name="ref" value="{{ ref }}" placeholder="SP-AAA111"><button>Track</button></form>
-{% if error %}<p class="err">{{ error }}</p>{% endif %}
-{% if order %}<div class="card">Ref {{ order['ref'] }} — status: {{ order['status'] }}</div>{% endif %}
+<h1>Track order</h1>
+<form class="ajax" method="get" action="/retail/track" style="display:flex;gap:6px;max-width:420px">
+  <input name="ref" value="{{ ref }}" placeholder="SP-AAA111"><button class="btn sm">Track</button></form>
+{% if order %}<div class="card" style="margin-top:12px">Ref {{ order['ref'] }} — status: {{ order['status'] }}</div>{% endif %}
 {% endblock %}

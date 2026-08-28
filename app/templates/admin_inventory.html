@@ -1,0 +1,23 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Inventory import</h1>
+<div class="panel">
+  <h3>Bulk import (XML)</h3>
+  <p class="muted">Paste a product catalog XML document.</p>
+  <textarea id="xml">&lt;catalog&gt;&lt;product name="SPRKL Yuzu"/&gt;&lt;/catalog&gt;</textarea>
+  <button class="btn sm" onclick="importXml()">Import XML</button>
+  <pre class="result"></pre>
+
+  <h3 style="margin-top:20px">Bulk import (ZIP archive)</h3>
+  <form class="ajax" method="post" action="/corporate/inventory/import-zip" enctype="multipart/form-data" style="display:flex;gap:6px">
+    <input type="file" name="file"><button class="btn sm">Upload archive</button>
+  </form>
+</div>
+<script>
+async function importXml(){
+  const out=document.querySelector('.result');
+  const r=await fetch('/corporate/inventory/import',{method:'POST',headers:{'Content-Type':'application/xml'},body:document.getElementById('xml').value});
+  out.textContent=JSON.stringify(await r.json(),null,2);
+}
+</script>
+{% endblock %}

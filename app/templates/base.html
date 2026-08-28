@@ -2,28 +2,80 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}SPRKL — Sparkling Water{% endblock %}</title>
-  <style>
-    body{font-family:system-ui,sans-serif;margin:0;color:#0a2540;background:#eaf6ff}
-    header{background:#0a2540;color:#fff;padding:12px 20px;display:flex;gap:20px;align-items:center}
-    header a{color:#7fd3ff;text-decoration:none;font-size:14px}
-    header .logo{font-weight:800;font-size:20px;color:#fff;letter-spacing:2px}
-    .warn{background:#ffe8b3;color:#7a5200;padding:6px 20px;font-size:12px}
-    main{max-width:900px;margin:20px auto;padding:0 20px}
-    .card{background:#fff;border-radius:10px;padding:16px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-    input,button,select{padding:8px;border-radius:6px;border:1px solid #bcd;font-size:14px}
-    button{background:#0a84ff;color:#fff;border:none;cursor:pointer}
-    .err{color:#b00020}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-    code{background:#f0f4f8;padding:2px 4px;border-radius:4px}
-  </style>
+  <link rel="stylesheet" href="/static/sprkl.css">
 </head>
 <body>
-  <header>
-    <span class="logo">SPRKL</span>
-    <a href="/">Shop</a><a href="/products">All Flavors</a><a href="/search">Search</a>
-    <a href="/retail/login">Account</a><a href="/corporate/login">Corporate</a>
+  <div class="warn">⚠ SPRKL is an intentionally vulnerable training app. Authorized testing only — do not deploy to the public internet.</div>
+  <header class="site">
+    <a class="logo" href="/">SPRKL<span>°</span></a>
+    <nav class="main">
+      <a href="/">Shop</a>
+      <a href="/products">All Flavors</a>
+      <a href="/store-locator">Store Locator</a>
+      <a href="/support">Support</a>
+    </nav>
+    <form class="search" method="get" action="/search">
+      <input name="q" placeholder="Search flavors…" value="{{ request.args.get('q','') }}">
+      <button aria-label="Search">⌕</button>
+    </form>
+    <div class="acct">
+      <a class="cart" href="/cart">🛒<span class="badge">{{ cart_count }}</span></a>
+      {% if current_user %}
+      <details class="menu">
+        <summary>Hi, {{ current_user['name'].split(' ')[0] }} ▾</summary>
+        <div class="dropdown">
+          <a href="/retail/dashboard">Dashboard</a>
+          <a href="/retail/orders">Orders</a>
+          <a href="/retail/wishlist">Wishlist</a>
+          <a href="/retail/giftcards">Gift Cards</a>
+          <a href="/retail/wallet">Wallet</a>
+          <a href="/retail/referrals">Referrals</a>
+          <a href="/retail/security">Security</a>
+          <a href="/retail/profile">Profile</a>
+          <a class="sep" href="/logout">Log out</a>
+        </div>
+      </details>
+      {% else %}
+      <a class="signin" href="/retail/login">Sign in</a>
+      {% endif %}
+    </div>
   </header>
+
   <main>{% block body %}{% endblock %}</main>
+
+  <footer class="site">
+    <div class="cols">
+      <div>
+        <b>SPRKL°</b>
+        <p>Crisp, bubbly, endlessly refreshing.</p>
+      </div>
+      <div>
+        <b>Shop</b>
+        <a href="/products">All Flavors</a>
+        <a href="/products?category=Lime">Lime</a>
+        <a href="/products?category=Berry">Berry</a>
+      </div>
+      <div>
+        <b>Company</b>
+        <a href="/about">About</a>
+        <a href="/press">Press</a>
+        <a href="/status">System Status</a>
+        <a href="/promo">Deals</a>
+      </div>
+      <div>
+        <b>Newsletter</b>
+        <form method="post" action="/newsletter" class="news">
+          <input name="email" placeholder="you@example.com">
+          <button>Join</button>
+        </form>
+        <a href="/newsletter/manage">Manage subscription</a>
+        <a href="/support">Contact Support</a>
+      </div>
+    </div>
+    <p class="fine">© SPRKL Beverages — a deliberately vulnerable demo.</p>
+  </footer>
+  <script src="/static/app.js"></script>
 </body>
 </html>

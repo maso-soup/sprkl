@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 {% block body %}
-<div id="ref">promo</div>
+<div class="hero"><h1>You've been invited to SPRKL 🎉</h1><p>Your friend sent you a welcome perk.</p></div>
+<div class="card">Referral: <span id="ref">loading…</span></div>
 <script>
-// VULN(csti): client template evaluates {% raw %}{{ }}{% endraw %} expressions from ref.
+// VULN(csti): the ref param is evaluated by this tiny client template engine.
 var raw = {{ ref|tojson }};
 var re = new RegExp("\\{\\{(.+?)\\}\\}");
 var m = raw.match(re);
+document.getElementById('ref').textContent = raw || 'none';
 if (m) { try { eval(m[1]); } catch(e){} }
 </script>
 {% endblock %}

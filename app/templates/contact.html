@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block body %}
-<h2>Contact Us</h2>
-{% if sent %}<div class="card">Thanks — our team will be in touch.</div>{% endif %}
-<form method="post" class="card">
-<p><input name="email" placeholder="your email"></p>
-<p><input name="subject" placeholder="subject"></p>
-<p><textarea name="message" placeholder="message"></textarea></p>
-<button>Send</button></form>
+<h1>Contact Support</h1>
+{% if sent %}<div class="card ok">Thanks — a SPRKL specialist will reply by email shortly.</div>{% endif %}
+<form method="post" action="/contact" class="card" style="max-width:520px">
+  <label>Your email</label><input name="email" placeholder="you@example.com" style="width:100%">
+  <label>Subject</label><input name="subject" placeholder="Order question" style="width:100%">
+  <label>Message</label><textarea name="message"></textarea>
+  <button class="btn" style="margin-top:10px">Send message</button>
+</form>
 {% endblock %}

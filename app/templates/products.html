@@ -1,14 +1,34 @@
 {% extends "base.html" %}
+{% from "_macros.html" import can %}
 {% block body %}
-<h2>All Flavors</h2>
-<form method="get" action="/products">
-  category <input name="category" value="{{ category }}">
-  in_stock <input name="in_stock" value="{{ in_stock }}">
-  sort <input name="sort" value="{{ sort }}">
-  <button>Filter</button>
+<h1>All Flavors</h1>
+<form method="get" action="/products" class="card" style="display:flex;gap:14px;align-items:end;flex-wrap:wrap">
+  <div><label>Category</label>
+    <select name="category">
+      <option value="">All</option>
+      {% for f in flavors %}<option value="{{ f }}" {{ 'selected' if f==category }}>{{ f }}</option>{% endfor %}
+    </select></div>
+  <div><label>Availability</label>
+    <select name="in_stock">
+      <option value="">Any</option>
+      <option value="1" {{ 'selected' if in_stock=='1' }}>In stock</option>
+      <option value="0" {{ 'selected' if in_stock=='0' }}>Out of stock</option>
+    </select></div>
+  <div><label>Sort by</label>
+    <select name="sort">
+      <option value="name" {{ 'selected' if sort=='name' }}>Name</option>
+      <option value="price" {{ 'selected' if sort=='price' }}>Price</option>
+    </select></div>
+  <button class="btn">Filter</button>
 </form>
-{% if error %}<p class="err">DB error: {{ error }}</p>{% endif %}
-<div class="grid">
-{% for r in rows %}<div class="card"><b>{{ r['name'] }}</b><br>{{ r['flavor'] }}<br>${{ '%.2f'|format(r['price']) }}</div>{% endfor %}
+{% if error %}<p class="err">Filter error: {{ error }}</p>{% endif %}
+<div class="grid" style="margin-top:18px">
+  {% for r in rows %}
+  <div class="card prod">{{ can(r['flavor']) }}
+    <h3><a href="/product/{{ r['id'] }}">{{ r['name'] }}</a></h3>
+    <div class="muted">{{ r['flavor'] }}</div><div class="price">${{ '%.2f'|format(r['price']) }}</div>
+    <button class="btn sm" data-add-cart="{{ r['id'] }}" style="margin-top:8px">Add to cart</button>
+  </div>
+  {% else %}<p class="muted">No products match.</p>{% endfor %}
 </div>
 {% endblock %}

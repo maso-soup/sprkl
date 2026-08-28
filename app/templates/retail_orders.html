@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block body %}<h1>Your orders</h1>
+<div class="dash">{% include "_acct_side.html" with context %}{% set active='orders' %}
+<div class="panel">
+  <table><tr><th>Order</th><th>Status</th><th>Total</th><th>Invoice</th></tr>
+  {% for o in orders %}<tr><td><a href="/retail/orders/{{ o['id'] }}">#{{ o['id'] }}</a></td><td>{{ o['status'] }}</td>
+    <td>${{ '%.2f'|format(o['total']) }}</td>
+    <td><a href="/retail/orders/{{ o['id'] }}/invoice">View</a></td></tr>{% endfor %}
+  </table>
+  <h3 style="margin-top:20px">Track an order</h3>
+  <form class="ajax" method="get" action="/retail/track" style="display:flex;gap:6px">
+    <input name="ref" placeholder="SP-AAA111"><button class="btn sm">Track</button></form>
+  <h3 style="margin-top:20px">Download an invoice file</h3>
+  <form class="ajax" method="get" action="/retail/invoices/download" style="display:flex;gap:6px">
+    <input name="file" value="INV-1001.txt"><button class="btn sm">Download</button></form>
+</div></div>{% endblock %}

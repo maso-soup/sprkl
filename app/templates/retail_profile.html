@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block body %}<h1>Profile</h1>
+<div class="dash">{% set active='profile' %}{% include "_acct_side.html" with context %}
+<div class="panel">
+  <label>Display name</label>
+  <form class="pf" data-endpoint="/api/v2/account" data-field="name" style="display:flex;gap:6px">
+    <input name="name" value="{{ u['name'] }}"><button class="btn sm" type="button" onclick="savePatch(this,'name')">Save</button>
+  </form>
+
+  <label>Email address</label>
+  <form class="ajax" method="post" action="/retail/account/email" style="display:flex;gap:6px">
+    <input name="email" value="{{ u['email'] }}"><button class="btn sm">Update email</button>
+  </form>
+
+  <label>Shipping address</label>
+  <form style="display:flex;gap:6px">
+    <input name="address" value="{{ u['address'] }}"><button class="btn sm" type="button" onclick="savePatch(this,'address')">Save</button>
+  </form>
+
+  <label>Advanced settings (raw account JSON)</label>
+  <textarea id="rawjson">{"name": "{{ u['name'] }}"}</textarea>
+  <button class="btn sm" onclick="saveRaw()">Save JSON</button>
+  <pre class="result"></pre>
+
+  <h3 style="margin-top:20px">Your account (via API)</h3>
+  <p class="muted">Loaded from <code>/api/v2/account</code>.</p>
+  <pre id="apiacct" class="result">loading…</pre>
+  <label>Look up a member profile</label>
+  <form id="userlookup" style="display:flex;gap:6px"><input name="id" placeholder="member id"><button class="btn sm">View</button></form>
+  <pre class="result"></pre>
+
+  <h3 style="margin-top:20px">Avatar</h3>
+  <form class="ajax" method="post" action="/retail/account/avatar" enctype="multipart/form-data" style="display:flex;gap:6px;align-items:center">
+    <input type="file" name="file"><button class="btn sm">Upload</button>
+  </form>
+  <label>…or import from a URL</label>
+  <form class="ajax" method="post" action="/retail/account/avatar-from-url" style="display:flex;gap:6px">
+    <input name="url" placeholder="https://…/photo.png"><button class="btn sm">Import</button>
+  </form>
+</div></div>
+<script>
+async function savePatch(btn, field){
+  const inp = btn.parentElement.querySelector('[name='+field+']');
+  const body = {}; body[field] = inp.value;
+  const r = await fetch('/api/v2/account',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  btn.textContent = r.ok ? 'Saved ✓' : 'Error'; setTimeout(()=>btn.textContent='Save',1200);
+}
+async function saveRaw(){
+  const out = document.querySelector('.result');
+  try{
+    const r = await fetch('/api/v2/account',{method:'PATCH',headers:{'Content-Type':'application/json'},body:document.getElementById('rawjson').value});
+    out.textContent = JSON.stringify(await r.json(), null, 2);
+  }catch(e){ out.textContent = String(e); }
+}
+fetch('/api/v2/account').then(r=>r.json()).then(d=>document.getElementById('apiacct').textContent=JSON.stringify(d,null,2)).catch(()=>{});
+document.getElementById('userlookup').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const id=e.target.querySelector('[name=id]').value;
+  const r=await fetch('/api/v2/users/'+id);
+  e.target.parentElement.querySelector('.result:last-of-type').textContent=JSON.stringify(await r.json(),null,2);
+});
+</script>
+{% endblock %}

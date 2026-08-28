@@ -60,8 +60,12 @@ def audit_headers():
 
 @bp.route("/status")
 def status():
-    resp = make_response(jsonify({"app": "sprkl", "framework": "SprklKit/1.0.0"}))
-    # VULN(known-cve): advertises a component version with a known CVE (canary).
+    from flask import render_template, request
+    if request.args.get("format") == "json":
+        resp = make_response(jsonify({"app": "sprkl", "framework": "SprklKit/1.0.0"}))
+    else:
+        resp = make_response(render_template("status.html"))
+    # VULN(known-cve): advertises a component version with a known CVE (canary in header).
     resp.headers["X-Powered-By"] = f"SprklKit/1.0.0 ({CVE_CANARY})"
     resp.headers["Server"] = "Werkzeug SprklKit/1.0.0"
     return resp

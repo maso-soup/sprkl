@@ -1,0 +1,15 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Admin Dashboard</h1>
+<p class="muted">Signed in as <code>{{ role }}</code>.</p>
+<div class="grid">
+  <a class="card" href="/admin/inventory"><b>📦 Inventory</b><div class="muted">Bulk import products</div></a>
+  <a class="card" href="/admin/directory"><b>👥 Employees</b><div class="muted">Search staff directory</div></a>
+  <a class="card" href="/admin/users"><b>🔑 Users &amp; Roles</b><div class="muted">Manage accounts &amp; flags</div></a>
+  <a class="card" href="/admin/orders"><b>🧾 Orders</b><div class="muted">Wholesale orders by org</div></a>
+  <a class="card" href="/admin/integrations"><b>🔌 Integrations</b><div class="muted">Webhooks &amp; FX sync</div></a>
+  <a class="card" href="/admin/tools"><b>🛠 Tools</b><div class="muted">Diagnostics &amp; labels</div></a>
+  <a class="card" href="/admin/themes"><b>🎨 Themes</b><div class="muted">Storefront themes</div></a>
+  <a class="card" href="/admin/prefs"><b>⚙️ Preferences</b><div class="muted">Import settings</div></a>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Preferences</h1>
+<div class="panel">
+  <h3>Import saved preferences</h3>
+  <p class="muted">Paste a base64 preferences blob exported from another instance.</p>
+  <form class="ajax" method="post" action="/corporate/prefs/import" style="display:flex;gap:6px">
+    <input name="prefs" placeholder="base64…" style="flex:1"><button class="btn sm">Import</button></form>
+</div>
+{% endblock %}

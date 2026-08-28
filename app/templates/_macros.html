@@ -1,0 +1,6 @@
+{% macro can(flavor) %}
+{% set map = {'Original':('#0a84ff','💧'),'Lime':('#37c871','🍋'),'Berry':('#c8459b','🫐'),
+              'Grapefruit':('#ff7a59','🍊'),'Cola':('#7a4a2b','🥤'),'Secret':('#555','✨')} %}
+{% set c = map.get(flavor, ('#0a84ff','🥫')) %}
+<div class="can" style="background:linear-gradient(135deg,{{c[0]}}22,{{c[0]}}44)">{{ c[1] }}</div>
+{% endmacro %}

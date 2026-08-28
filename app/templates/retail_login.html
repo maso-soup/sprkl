@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% block body %}
-<h2>Customer Login</h2>
+<div style="max-width:420px;margin:0 auto">
+<h1>Sign in</h1>
 {% if error %}<p class="err">{{ error }}</p>{% endif %}
 <form method="post" class="card">
-  <p><input name="email" placeholder="email"></p>
-  <p><input name="password" type="password" placeholder="password"></p>
-  <button>Sign in</button>
+  <label>Email</label><input name="email" placeholder="you@example.com" style="width:100%">
+  <label>Password</label><input name="password" type="password" style="width:100%">
+  <label style="font-weight:400;margin-top:10px"><input type="checkbox" name="remember"> Remember me on this device</label>
+  <button class="btn" style="width:100%;margin-top:12px">Sign in</button>
 </form>
-<small>Demo customer: alice@example.com / password1</small>
+<p style="text-align:center;margin:12px 0"><a href="/retail/oauth/authorize?redirect_uri=/retail/dashboard" class="btn ghost" style="width:100%">Sign in with SprklID</a></p>
+<p class="muted" style="text-align:center">
+  <a href="/retail/security">Forgot password?</a> ·
+  Demo: alice@example.com / password1
+</p>
+</div>
 {% endblock %}

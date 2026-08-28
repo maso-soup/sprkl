@@ -16,6 +16,8 @@ bp = Blueprint("corporate", __name__, url_prefix="/corporate")
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     error = None
+    if request.method == "GET":
+        return redirect("/admin")
     if request.method == "POST":
         user = request.form.get("username", "")
         pw = request.form.get("password", "")
@@ -30,17 +32,14 @@ def login():
                 engine.solve("default-creds-admin", actor(), {"username": user})
             session["corp"] = row["id"]
             session["corp_role"] = row["role"]
-            return redirect(url_for("corporate.dashboard"))
+            return redirect("/admin/console")
         error = "Invalid corporate credentials"
     return render_template("corporate_login.html", error=error)
 
 
 @bp.route("/dashboard")
 def dashboard():
-    if not session.get("corp"):
-        return redirect(url_for("corporate.login"))
-    return render_template("corporate_dashboard.html",
-                           role=session.get("corp_role"))
+    return redirect("/admin/console")
 
 
 @bp.route("/tools/ping", methods=["GET", "POST"])

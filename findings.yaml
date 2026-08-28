@@ -39,6 +39,7 @@ findings:
     difficulty: 2
     tier: retail
     location: "GET /retail/orders/<order_id>/invoice"
+    gui: "Account → Orders → order → “View invoice” (tamper the id)"
     oracle_type: canary
     status: live
     hint: "Order ids are sequential; the invoice route never checks ownership."
@@ -55,6 +56,7 @@ findings:
     difficulty: 2
     tier: api
     location: "GET /api/v2/users/<id>"
+    gui: "Account → Profile → “Look up a member profile”"
     oracle_type: canary
     status: live
     hint: "Object-level authorization is missing on the user endpoint."
@@ -71,6 +73,7 @@ findings:
     difficulty: 3
     tier: api
     location: "POST /api/v2/admin/users/<id>/role"
+    gui: "Admin → Users & Roles → Change role (replay without an admin token)"
     oracle_type: state-diff
     status: live
     hint: "The admin role-change function only hides its button; it never enforces role server-side."
@@ -87,6 +90,7 @@ findings:
     difficulty: 2
     tier: corporate
     location: "GET /corporate/reports/financials"
+    gui: "Force-browse /corporate/reports/financials"
     oracle_type: canary
     status: live
     hint: "The route is not linked anywhere but is reachable without a session."
@@ -103,6 +107,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "PATCH /api/v2/account (JSON body)"
+    gui: "Account → Profile → Advanced settings (raw account JSON)"
     oracle_type: state-diff
     status: live
     hint: "The profile update binds every JSON key, including ones the form never shows."
@@ -119,6 +124,7 @@ findings:
     difficulty: 4
     tier: corporate
     location: "GET /api/v2/orgs/<org_id>/orders"
+    gui: "Admin → Orders → view another org id"
     oracle_type: canary
     status: live
     hint: "The org_id in the path is trusted over the org bound to your session."
@@ -135,6 +141,7 @@ findings:
     difficulty: 3
     tier: api
     location: "HEAD/PUT /api/v2/admin/flags"
+    gui: "Admin → Users & Roles → Feature flags (PUT)"
     oracle_type: state-diff
     status: live
     hint: "Only GET/POST are guarded; other verbs skip the auth filter."
@@ -151,6 +158,7 @@ findings:
     difficulty: 5
     tier: corporate
     location: "GET /corporate/public/..%2fadmin/console"
+    gui: "Force-browse /corporate/public/..%2fadmin/console"
     oracle_type: canary
     status: live
     hint: "The auth gate matches on the raw path prefix before normalization."
@@ -167,6 +175,7 @@ findings:
     difficulty: 2
     tier: retail
     location: "GET /retail/wishlist?uid=<id>"
+    gui: "Account → Wishlist → “View a shared wishlist” (uid)"
     oracle_type: canary
     status: live
     hint: "The uid query param overrides the session user."
@@ -183,6 +192,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "GET /api/v2/giftcards/<code_id>"
+    gui: "Account → Gift Cards → “Look up a gift card”"
     oracle_type: canary
     status: live
     hint: "Gift-card ids are short and unchecked against the owner."
@@ -202,6 +212,7 @@ findings:
     difficulty: 3
     tier: api
     location: "Authorization: Bearer <jwt> on /api/v2/*"
+    gui: "Profile API bearer token on /api/v2/* (forge alg=none)"
     oracle_type: sink-predicate
     status: live
     hint: "The verifier honors the token's own alg header."
@@ -218,6 +229,7 @@ findings:
     difficulty: 4
     tier: api
     location: "Authorization: Bearer <jwt>"
+    gui: "Profile API bearer token (crack the HS256 secret)"
     oracle_type: sink-predicate
     status: live
     hint: "The signing key is a short dictionary word."
@@ -234,6 +246,7 @@ findings:
     difficulty: 6
     tier: api
     location: "JWT header kid parameter"
+    gui: "Profile API bearer token (kid header)"
     oracle_type: sink-predicate
     status: live
     hint: "kid is concatenated into a key lookup; a traversal/known-file kid picks a predictable key."
@@ -250,6 +263,7 @@ findings:
     difficulty: 4
     tier: retail
     location: "GET /retail/reset?token=<t>"
+    gui: "Account → Security → Password reset"
     oracle_type: state-diff
     status: live
     hint: "The token is derived from email + a coarse timestamp with a weak hash."
@@ -266,6 +280,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/login (Set-Cookie behavior)"
+    gui: "Sign-in adopting a fixed session id (/retail/login-fixation)"
     oracle_type: sink-predicate
     status: live
     hint: "The session id you present before login survives authentication."
@@ -282,6 +297,7 @@ findings:
     difficulty: 2
     tier: retail
     location: "Cookie: remember=<token>"
+    gui: "Login “Remember me” + Account → Security → “Who am I?”"
     oracle_type: sink-predicate
     status: live
     hint: "The remember token is a reversible encoding of the user id."
@@ -298,6 +314,7 @@ findings:
     difficulty: 4
     tier: corporate
     location: "POST /corporate/login then /corporate/dashboard"
+    gui: "Admin sign-in → skip the OTP step"
     oracle_type: sink-predicate
     status: live
     hint: "The dashboard trusts a \"pre-mfa\" session that was only meant for the OTP page."
@@ -314,6 +331,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "GET /retail/oauth/authorize?redirect_uri=<url>"
+    gui: "Login → “Sign in with SprklID” (redirect_uri)"
     oracle_type: sink-predicate
     status: live
     hint: "redirect_uri is not validated against a registered allowlist."
@@ -330,6 +348,7 @@ findings:
     difficulty: 2
     tier: retail
     location: "POST /retail/login"
+    gui: "Login form (repeated failed attempts)"
     oracle_type: state-diff
     status: live
     hint: "Failed logins are never counted."
@@ -346,6 +365,7 @@ findings:
     difficulty: 6
     tier: corporate
     location: "POST /corporate/saml/acs"
+    gui: "n/a"
     oracle_type: na
     status: na
     hint: "Requires a SAML IdP flow."
@@ -365,6 +385,7 @@ findings:
     difficulty: 2
     tier: retail
     location: "POST /retail/login (email field)"
+    gui: "Sign in → email field"
     oracle_type: sink-predicate
     status: live
     hint: "The login query is string-built from the email field."
@@ -381,6 +402,7 @@ findings:
     difficulty: 2
     tier: public
     location: "GET /search?q=<term>"
+    gui: "Header search box"
     oracle_type: sink-predicate
     status: live
     hint: "A single quote in q surfaces a SQLite error containing your input."
@@ -397,6 +419,7 @@ findings:
     difficulty: 3
     tier: public
     location: "GET /products?category=<c>&sort=<s>"
+    gui: "All Flavors → Category filter"
     oracle_type: canary
     status: live
     hint: "The sort/category values land directly in the query; column count is small."
@@ -413,6 +436,7 @@ findings:
     difficulty: 4
     tier: public
     location: "GET /products?in_stock=<expr>"
+    gui: "All Flavors → Availability filter (in_stock)"
     oracle_type: sink-predicate
     status: live
     hint: "No error and no data, but the result set changes truthfully."
@@ -429,6 +453,7 @@ findings:
     difficulty: 4
     tier: retail
     location: "GET /retail/track?ref=<ref>"
+    gui: "Account → Orders → Track an order"
     oracle_type: sink-predicate
     status: live
     hint: "A crafted ref can make the response hang predictably."
@@ -445,6 +470,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "PATCH /api/v2/account then admin report render"
+    gui: "Account → Profile → Display name (fires in Admin report)"
     oracle_type: canary
     status: live
     hint: "A stored display name is later concatenated into an admin-side query."
@@ -461,6 +487,7 @@ findings:
     difficulty: 3
     tier: corporate
     location: "POST /corporate/login (JSON body)"
+    gui: "Admin JSON login /corporate/api/login"
     oracle_type: sink-predicate
     status: live
     hint: "The corporate directory is a Mongo-style store; JSON login accepts operator objects."
@@ -477,6 +504,7 @@ findings:
     difficulty: 4
     tier: api
     location: "POST /api/v2/newsletter/find"
+    gui: "Footer → Manage subscription (email lookup)"
     oracle_type: canary
     status: live
     hint: "Operator objects in the filter are passed straight to the store."
@@ -493,6 +521,7 @@ findings:
     difficulty: 4
     tier: corporate
     location: "POST /corporate/labels/generate (filename field)"
+    gui: "Admin → Tools → Shipping label generator"
     oracle_type: sink-predicate
     status: live
     hint: "The filename is passed to a shell command."
@@ -509,6 +538,7 @@ findings:
     difficulty: 5
     tier: corporate
     location: "POST /corporate/tools/ping (host field)"
+    gui: "Admin → Tools → Connectivity check"
     oracle_type: sink-predicate
     status: live
     hint: "No output is returned, but the command still runs — make it call home."
@@ -525,6 +555,7 @@ findings:
     difficulty: 4
     tier: retail
     location: "POST /retail/cart/giftmessage (message field)"
+    gui: "Checkout → Gift message"
     oracle_type: sink-predicate
     status: live
     hint: "Your message is rendered through Jinja, not just displayed."
@@ -541,6 +572,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "POST /retail/cart/apply-coupon (formula coupons)"
+    gui: "Checkout → Formula coupon"
     oracle_type: sink-predicate
     status: live
     hint: "\"Percent-off\" formula coupons are evaluated as Python."
@@ -557,6 +589,7 @@ findings:
     difficulty: 4
     tier: corporate
     location: "GET /corporate/directory?u=<user>"
+    gui: "Admin → Employees directory search"
     oracle_type: canary
     status: live
     hint: "The search filter is string-built; * and ) change its meaning."
@@ -573,6 +606,7 @@ findings:
     difficulty: 4
     tier: public
     location: "GET /products/<id>/spec?field=<f>"
+    gui: "Product → Technical specs (field selector)"
     oracle_type: canary
     status: live
     hint: "Specs are stored as XML; the field selector is injectable."
@@ -589,6 +623,7 @@ findings:
     difficulty: 4
     tier: public
     location: "GET /go/track?next=<url>"
+    gui: "Product → “sourcing” link (/go/track next=)"
     oracle_type: sink-predicate
     status: live
     hint: "The value is copied into a response header verbatim."
@@ -605,6 +640,7 @@ findings:
     difficulty: 4
     tier: public
     location: "POST /contact (email/subject fields)"
+    gui: "Support / Contact form"
     oracle_type: sink-predicate
     status: live
     hint: "The form fields become raw mail headers in the outbox."
@@ -621,6 +657,7 @@ findings:
     difficulty: 4
     tier: api
     location: "GET /api/v2/products?filter=<expr>"
+    gui: "REST /api/v2/products?filter="
     oracle_type: canary
     status: live
     hint: "The filter DSL is compiled into SQL without isolating operators."
@@ -637,6 +674,7 @@ findings:
     difficulty: 4
     tier: api
     location: "POST /graphql (product(slug:) resolver)"
+    gui: "GraphQL /graphql product(slug:)"
     oracle_type: canary
     status: live
     hint: "A resolver builds SQL from a string argument."
@@ -653,6 +691,7 @@ findings:
     difficulty: 6
     tier: public
     location: "n/a"
+    gui: "n/a"
     oracle_type: na
     status: na
     hint: "SQLite cannot make outbound network/file calls."
@@ -672,6 +711,7 @@ findings:
     difficulty: 5
     tier: corporate
     location: "Cookie: prefs=<base64 pickle> / POST /corporate/prefs/import"
+    gui: "Admin → Preferences → Import (base64 blob)"
     oracle_type: sink-predicate
     status: live
     hint: "The preferences blob is base64 that gets unpickled."
@@ -688,6 +728,7 @@ findings:
     difficulty: 4
     tier: corporate
     location: "POST /corporate/inventory/import (XML body)"
+    gui: "Admin → Inventory → Bulk import (XML)"
     oracle_type: canary
     status: live
     hint: "External entities are enabled on the import parser."
@@ -704,6 +745,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "POST /retail/account/avatar (SVG)"
+    gui: "Account → Profile → Avatar upload (SVG)"
     oracle_type: canary
     status: live
     hint: "SVGs are parsed as XML with entities enabled."
@@ -720,6 +762,7 @@ findings:
     difficulty: 5
     tier: api
     location: "POST /api/v2/preferences (deep-merge)"
+    gui: "REST /api/v2/preferences (deep-merge)"
     oracle_type: state-diff
     status: live
     hint: "A recursive merge lets you reach special keys that change global defaults."
@@ -736,6 +779,7 @@ findings:
     difficulty: 6
     tier: corporate
     location: "n/a"
+    gui: "n/a"
     oracle_type: na
     status: na
     hint: "Requires a JVM."
@@ -755,6 +799,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/account/avatar-from-url (url field)"
+    gui: "Account → Profile → Import avatar from URL"
     oracle_type: sink-predicate
     status: live
     hint: "The server fetches any URL you provide."
@@ -771,6 +816,7 @@ findings:
     difficulty: 4
     tier: retail
     location: "POST /retail/account/avatar-from-url (url=169.254.169.254)"
+    gui: "Account → Profile → Import avatar from URL (169.254.169.254)"
     oracle_type: canary
     status: live
     hint: "The fetcher can reach the internal metadata IP."
@@ -787,6 +833,7 @@ findings:
     difficulty: 5
     tier: corporate
     location: "POST /corporate/integrations/webhook/test"
+    gui: "Admin → Integrations → Test a webhook"
     oracle_type: sink-predicate
     status: live
     hint: "No response body is shown, but the request is still made."
@@ -803,6 +850,7 @@ findings:
     difficulty: 6
     tier: retail
     location: "POST /retail/account/avatar-from-url (url with bypass)"
+    gui: "Account → Profile → Import avatar from URL (bypass encoding)"
     oracle_type: canary
     status: live
     hint: "The blocklist matches \"localhost\"/\"127.0.0.1\" literally; equivalents slip through."
@@ -819,6 +867,7 @@ findings:
     difficulty: 4
     tier: public
     location: "POST /retail/reset/request (Host header)"
+    gui: "Account → Security → Password reset (Host header)"
     oracle_type: sink-predicate
     status: live
     hint: "The reset email's link is built from the Host header."
@@ -835,6 +884,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "GET /retail/account/profile.css (path confusion)"
+    gui: "/retail/account/<name>.css"
     oracle_type: canary
     status: live
     hint: "A fake static extension makes a private page look cacheable."
@@ -851,6 +901,7 @@ findings:
     difficulty: 5
     tier: public
     location: "GET / (X-Forwarded-Host reflected, cache key ignores it)"
+    gui: "/cached-home (X-Forwarded-Host)"
     oracle_type: sink-predicate
     status: live
     hint: "A reflected header is cached but not part of the cache key."
@@ -867,6 +918,7 @@ findings:
     difficulty: 6
     tier: public
     location: "n/a"
+    gui: "n/a"
     oracle_type: na
     status: na
     hint: "Needs a front-end/back-end proxy pair with desync."
@@ -886,6 +938,7 @@ findings:
     difficulty: 2
     tier: public
     location: "GET /search?q=<payload>"
+    gui: "Header search box"
     oracle_type: sink-predicate
     status: live
     hint: "Your query is echoed into the page unescaped."
@@ -902,6 +955,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/products/<id>/review"
+    gui: "Product → Write a review"
     oracle_type: sink-predicate
     status: live
     hint: "Review bodies are rendered raw to every viewer."
@@ -918,6 +972,7 @@ findings:
     difficulty: 3
     tier: public
     location: "/search#<payload> (client JS)"
+    gui: "/search?hl= (highlight)"
     oracle_type: sink-predicate
     status: live
     hint: "Client JS writes location.hash into innerHTML."
@@ -934,6 +989,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "POST /retail/products/<id>/review (rich text)"
+    gui: "Product → Write a review (mXSS)"
     oracle_type: sink-predicate
     status: live
     hint: "The naive sanitizer's output is re-parsed by the browser into live markup."
@@ -950,6 +1006,7 @@ findings:
     difficulty: 4
     tier: public
     location: "POST /contact -> rendered in /corporate/support/inbox"
+    gui: "Support/Contact form → renders in Admin → Support Inbox"
     oracle_type: sink-predicate
     status: live
     hint: "You never see it fire; a staff view does."
@@ -966,6 +1023,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/account/email"
+    gui: "Account → Profile → Update email (cross-site)"
     oracle_type: state-diff
     status: live
     hint: "The state-changing form has no anti-CSRF token and accepts cross-site posts."
@@ -982,6 +1040,7 @@ findings:
     difficulty: 3
     tier: api
     location: "GET /api/v2/account (ACAO reflection)"
+    gui: "REST /api/v2/account (Origin reflection)"
     oracle_type: sink-predicate
     status: live
     hint: "Access-Control-Allow-Origin echoes the request Origin and allows credentials."
@@ -998,6 +1057,7 @@ findings:
     difficulty: 2
     tier: public
     location: "GET /go?url=<url>"
+    gui: "Product → Share (/go?url=)"
     oracle_type: sink-predicate
     status: live
     hint: "The url param is used as a redirect target unchecked."
@@ -1014,6 +1074,7 @@ findings:
     difficulty: 1
     tier: retail
     location: "GET /retail/wallet/transfer"
+    gui: "Account → Wallet → Transfer funds (framed)"
     oracle_type: sink-predicate
     status: live
     hint: "No X-Frame-Options / frame-ancestors on a sensitive action page."
@@ -1030,6 +1091,7 @@ findings:
     difficulty: 5
     tier: public
     location: "response Content-Security-Policy header"
+    gui: "Deals campaign /promo?msg="
     oracle_type: sink-predicate
     status: live
     hint: "The policy allows unsafe-inline / a wildcard host."
@@ -1046,6 +1108,7 @@ findings:
     difficulty: 5
     tier: public
     location: "/embed/widget (window message listener)"
+    gui: "Store Locator embed widget"
     oracle_type: sink-predicate
     status: live
     hint: "The message listener never checks event.origin."
@@ -1062,6 +1125,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "stored XSS sink with unclosed attribute"
+    gui: "Product → Write a review (unterminated attribute)"
     oracle_type: sink-predicate
     status: live
     hint: "An unterminated attribute swallows page markup up to the next quote."
@@ -1078,6 +1142,7 @@ findings:
     difficulty: 4
     tier: public
     location: "/?ref=<expr> rendered by the client template"
+    gui: "Referral welcome /ref-landing?ref="
     oracle_type: sink-predicate
     status: live
     hint: "A tiny client template engine evaluates {{ }} from a URL param."
@@ -1097,6 +1162,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "GET /retail/invoices/download?file=<path>"
+    gui: "Account → Orders → Download invoice file"
     oracle_type: sink-predicate
     status: live
     hint: "The file param is joined to a directory without normalization."
@@ -1113,6 +1179,7 @@ findings:
     difficulty: 4
     tier: retail
     location: "POST /retail/account/avatar (file)"
+    gui: "Account → Profile → Avatar upload (.html template)"
     oracle_type: sink-predicate
     status: live
     hint: "The upload keeps your extension and is served from a path that executes templates."
@@ -1129,6 +1196,7 @@ findings:
     difficulty: 5
     tier: corporate
     location: "GET /corporate/render?theme=<name>"
+    gui: "Admin → Themes → Preview theme"
     oracle_type: sink-predicate
     status: live
     hint: "The theme name is used to build an include path."
@@ -1145,6 +1213,7 @@ findings:
     difficulty: 5
     tier: corporate
     location: "POST /corporate/inventory/import-zip"
+    gui: "Admin → Inventory → Bulk import (ZIP)"
     oracle_type: sink-predicate
     status: live
     hint: "Archive entry names are trusted during extraction."
@@ -1161,6 +1230,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/account/avatar (Content-Type spoof)"
+    gui: "Account → Profile → Avatar upload (spoofed type)"
     oracle_type: sink-predicate
     status: live
     hint: "Only the declared Content-Type is checked, not the bytes."
@@ -1180,6 +1250,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/cart/update (qty field)"
+    gui: "Cart → quantity (negative)"
     oracle_type: state-diff
     status: live
     hint: "Quantity is not constrained to be positive."
@@ -1196,6 +1267,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/cart/apply-coupon"
+    gui: "Cart/Checkout → Apply coupon (repeat)"
     oracle_type: state-diff
     status: live
     hint: "Redemption is not recorded atomically per user."
@@ -1212,6 +1284,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "POST /retail/wallet/redeem (concurrent)"
+    gui: "Account → Gift Cards → Redeem (concurrent)"
     oracle_type: state-diff
     status: live
     hint: "Balance check and debit are not atomic."
@@ -1228,6 +1301,7 @@ findings:
     difficulty: 4
     tier: retail
     location: "POST /retail/checkout/confirm (without /pay)"
+    gui: "Checkout → Place order (skip Pay)"
     oracle_type: state-diff
     status: live
     hint: "The confirm step never verifies the payment step ran."
@@ -1244,6 +1318,7 @@ findings:
     difficulty: 4
     tier: public
     location: "POST /retail/cart/apply-coupon (X-Forwarded-For)"
+    gui: "Checkout → Guess a promo code (X-Forwarded-For)"
     oracle_type: state-diff
     status: live
     hint: "The limiter keys on a spoofable header."
@@ -1260,6 +1335,7 @@ findings:
     difficulty: 3
     tier: retail
     location: "POST /retail/referral/redeem"
+    gui: "Account → Referrals → Redeem own code"
     oracle_type: state-diff
     status: live
     hint: "The referrer and referee are never compared."
@@ -1276,6 +1352,7 @@ findings:
     difficulty: 5
     tier: retail
     location: "POST /retail/cart/update (very large qty)"
+    gui: "Cart → quantity (huge)"
     oracle_type: state-diff
     status: live
     hint: "A huge quantity wraps/overflows the computed total."
@@ -1295,6 +1372,7 @@ findings:
     difficulty: 2
     tier: api
     location: "GET /api/v2/users/<id>"
+    gui: "Account → Profile → member lookup /api/v2/users/{id}"
     oracle_type: canary
     status: live
     hint: "The serializer returns the whole row."
@@ -1311,6 +1389,7 @@ findings:
     difficulty: 4
     tier: retail
     location: "coupon/reset token generation"
+    gui: "Account → Security → Promo tokens"
     oracle_type: sink-predicate
     status: live
     hint: "Tokens come from a seeded, non-crypto PRNG."
@@ -1327,6 +1406,7 @@ findings:
     difficulty: 6
     tier: retail
     location: "POST /retail/cart/apply-coupon (enc= token)"
+    gui: "Checkout → Redeem an encrypted coupon"
     oracle_type: sink-predicate
     status: live
     hint: "Decryption errors and padding errors are distinguishable."
@@ -1343,6 +1423,7 @@ findings:
     difficulty: 6
     tier: retail
     location: "Cookie: profile=<data>.<md5(secret||data)>"
+    gui: "Account → Security → Verify my profile cookie"
     oracle_type: sink-predicate
     status: live
     hint: "The MAC is md5(secret || data) — extendable."
@@ -1359,6 +1440,7 @@ findings:
     difficulty: 2
     tier: api
     location: "derived from any user-record leak"
+    gui: "member lookup /api/v2/users/{id}"
     oracle_type: canary
     status: live
     hint: "The leaked hashes are plain MD5 of the password."
@@ -1375,6 +1457,7 @@ findings:
     difficulty: 1
     tier: public
     location: "GET /static/app.js"
+    gui: "/static/app.js (promo validator) → /api/v2/keycheck"
     oracle_type: canary
     status: live
     hint: "A live API key is embedded client-side."
@@ -1391,6 +1474,7 @@ findings:
     difficulty: 3
     tier: public
     location: "n/a"
+    gui: "n/a"
     oracle_type: na
     status: na
     hint: "The app serves plain HTTP in-container; TLS is terminated elsewhere."
@@ -1410,6 +1494,7 @@ findings:
     difficulty: 2
     tier: public
     location: "GET /debug"
+    gui: "/debug (see robots.txt)"
     oracle_type: canary
     status: live
     hint: "A diagnostics route dumps environment and config."
@@ -1426,6 +1511,7 @@ findings:
     difficulty: 1
     tier: corporate
     location: "POST /corporate/login (admin/admin)"
+    gui: "/admin (admin/admin)"
     oracle_type: sink-predicate
     status: live
     hint: "A seeded admin account uses default credentials."
@@ -1442,6 +1528,7 @@ findings:
     difficulty: 1
     tier: public
     location: "any handler triggered to error (e.g., bad type)"
+    gui: "/api/v2/echo?n=abc"
     oracle_type: canary
     status: live
     hint: "Unhandled errors render a full debug traceback."
@@ -1458,6 +1545,7 @@ findings:
     difficulty: 1
     tier: public
     location: "all responses"
+    gui: "/audit/security-headers"
     oracle_type: sink-predicate
     status: live
     hint: "HSTS/X-Content-Type-Options/X-Frame-Options/CSP are absent."
@@ -1474,6 +1562,7 @@ findings:
     difficulty: 3
     tier: public
     location: "GET /status (Server / X-Powered-By + /requirements.txt)"
+    gui: "System Status → advisory search (X-Powered-By)"
     oracle_type: canary
     status: live
     hint: "The advertised component version matches a public CVE."
@@ -1490,6 +1579,7 @@ findings:
     difficulty: 2
     tier: public
     location: "GET /backup.zip, GET /.env"
+    gui: "/backup.zip, /.env (see robots.txt)"
     oracle_type: canary
     status: live
     hint: "Developer artifacts are served from web root."
@@ -1506,6 +1596,7 @@ findings:
     difficulty: 3
     tier: public
     location: "GET /assets/?list=1 (fake S3)"
+    gui: "/assets/?list=1 (media library)"
     oracle_type: canary
     status: live
     hint: "The bucket allows anonymous listing."
@@ -1522,6 +1613,7 @@ findings:
     difficulty: 3
     tier: corporate
     location: "POST /api/v2/admin/users/<id>/role"
+    gui: "Admin → Users & Roles → Change role (no audit)"
     oracle_type: state-diff
     status: live
     hint: "Privileged role changes leave no audit entry."
@@ -1541,6 +1633,7 @@ findings:
     difficulty: 2
     tier: api
     location: "POST /graphql (__schema query)"
+    gui: "GraphQL /graphql __schema"
     oracle_type: canary
     status: live
     hint: "Introspection reveals hidden admin types/fields."
@@ -1557,6 +1650,7 @@ findings:
     difficulty: 3
     tier: api
     location: "POST /graphql (user(id:) resolver)"
+    gui: "GraphQL /graphql user(id:)"
     oracle_type: canary
     status: live
     hint: "The user resolver returns any id without an ownership check."
@@ -1573,6 +1667,7 @@ findings:
     difficulty: 4
     tier: api
     location: "POST /graphql (deeply nested / batched)"
+    gui: "GraphQL /graphql (batched/deep query)"
     oracle_type: state-diff
     status: live
     hint: "No depth or batch limit is enforced."
@@ -1589,6 +1684,7 @@ findings:
     difficulty: 3
     tier: api
     location: "POST /api/v2/products/<id> (X-HTTP-Method-Override: DELETE)"
+    gui: "REST /api/v2/products/{id} (X-HTTP-Method-Override)"
     oracle_type: state-diff
     status: live
     hint: "A method-override header changes the effective verb past the auth check."
@@ -1605,6 +1701,7 @@ findings:
     difficulty: 3
     tier: api
     location: "GET /api/v1/users/<id>"
+    gui: "REST /api/v1/users/{id} (see robots.txt)"
     oracle_type: canary
     status: live
     hint: "The old API version lacks the fixes applied to v2."
@@ -1621,6 +1718,7 @@ findings:
     difficulty: 3
     tier: api
     location: "GET /api/v2/products?limit=<n>"
+    gui: "REST /api/v2/products?limit="
     oracle_type: canary
     status: live
     hint: "An attacker-supplied limit is honored without a cap."
@@ -1637,6 +1735,7 @@ findings:
     difficulty: 5
     tier: corporate
     location: "POST /corporate/integrations/fx-sync (upstream URL)"
+    gui: "Admin → Integrations → FX rate sync"
     oracle_type: sink-predicate
     status: live
     hint: "The server trusts and fetches an operator-supplied upstream, then trusts its response."
@@ -1653,6 +1752,7 @@ findings:
     difficulty: 4
     tier: api
     location: "WS /ws/notifications"
+    gui: "WebSocket /ws/notifications"
     oracle_type: canary
     status: live
     hint: "The socket accepts any origin and never authenticates the subscriber."

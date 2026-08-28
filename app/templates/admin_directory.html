@@ -1,0 +1,8 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Employee directory</h1>
+<div class="panel">
+  <form class="ajax" method="get" action="/corporate/directory" style="display:flex;gap:6px">
+    <input name="u" placeholder="username"><button class="btn sm">Search</button></form>
+</div>
+{% endblock %}

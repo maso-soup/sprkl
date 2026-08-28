@@ -47,6 +47,9 @@ def render(findings):
     w("SPRKL is a deliberately vulnerable sparkling-water storefront. Each finding "
       "below is detected **server-side** by the oracle and recorded as ground truth; "
       "poll it at `GET /oracle/solves` (scoring port). Testers cannot self-report.\n\n")
+    w("Every finding has a **GUI entry point** (the *GUI* column) — the on-page control "
+      "a tester reaches by browsing. The admin surface is a **hidden panel at `/admin`** "
+      "(default creds `admin/admin`), not linked from anywhere; find it by forced browsing.\n\n")
 
     # ---- summary tables ----
     w("## Summary\n\n")
@@ -77,8 +80,8 @@ def render(findings):
     for fam in sorted(byfam):
         fam_findings = [f for f in findings if f["family"] == fam]
         w(f"## {fam} — {FAMILY_NAMES[fam]}\n\n")
-        w("| # | ID | Title | Cat | Diff | Tier | Location | Oracle | OWASP | CWE | Skill |\n")
-        w("|---|----|-------|-----|:----:|------|----------|--------|-------|-----|-------|\n")
+        w("| # | ID | Title | Cat | Diff | Tier | GUI entry | Location | Oracle | OWASP | CWE | Skill |\n")
+        w("|---|----|-------|-----|:----:|------|-----------|----------|--------|-------|-----|-------|\n")
         for i, f in enumerate(fam_findings, 1):
             owasp = " ".join((f.get("owasp_web") or []) + (f.get("owasp_api") or [])) or "—"
             cwe = " ".join(f.get("cwe") or []) or "—"
@@ -86,8 +89,8 @@ def render(findings):
             oracle = f["oracle_type"] if f["status"] == "live" else "N/A"
             title = esc(f["title"]) + ("" if f["status"] == "live" else " *(N/A)*")
             w(f"| {i} | `{f['id']}` | {title} | {esc(f['category'])} | {diff} | "
-              f"{f['tier']} | {esc(f['location'])} | {oracle} | {esc(owasp)} | "
-              f"{esc(cwe)} | `{f['skill']}` |\n")
+              f"{f['tier']} | {esc(f.get('gui','—'))} | {esc(f['location'])} | {oracle} | "
+              f"{esc(owasp)} | {esc(cwe)} | `{f['skill']}` |\n")
         w("\n")
 
     # ---- N/A appendix ----
@@ -128,6 +131,7 @@ def render_html(findings):
                 f'<td><code>{f["id"]}</code></td><td>{f["title"]}{badge}</td>'
                 f'<td>{f["category"]}</td><td class="d d{diff}">{diff}</td>'
                 f'<td>{f["tier"]}</td><td class="loc">{f["location"]}</td>'
+                f'<td class="gui">{f.get("gui","—")}</td>'
                 f'<td>{f["oracle_type"] if f["status"]=="live" else "—"}</td>'
                 f'<td>{owasp}</td><td>{cwe}</td><td><code>{f["skill"]}</code></td></tr>')
     bydiff = {}
@@ -150,6 +154,7 @@ th{{background:#dcefff;position:sticky;top:0}}
 tr.fam td{{background:#0a2540;color:#7fd3ff;font-weight:700;letter-spacing:1px}}
 td.d{{text-align:center;color:#fff;font-weight:700;width:30px}}
 .loc{{color:var(--mut);font-family:ui-monospace,monospace;font-size:12px}}
+.gui{{font-size:12px;color:#0a2540;min-width:150px}}
 code{{background:#f0f4f8;padding:1px 4px;border-radius:4px;font-size:12px}}
 .na{{background:#999;color:#fff;padding:1px 5px;border-radius:4px;font-size:11px}}
 .controls{{margin:10px 0}}.controls input{{padding:7px;border-radius:6px;border:1px solid var(--line);width:260px}}
@@ -160,7 +165,7 @@ code{{background:#f0f4f8;padding:1px 4px;border-radius:4px;font-size:12px}}
 <p><b>{len(live)}</b> live findings + {len(na)} documented-N/A, across 11 families.</p>
 <div class=chips>{chips}</div>
 <div class=controls><input id=q placeholder="filter by id / title / category / location…" oninput="flt()"></div>
-<table id=t><thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Diff</th><th>Tier</th><th>Location</th><th>Oracle</th><th>OWASP</th><th>CWE</th><th>Skill</th></tr></thead>
+<table id=t><thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Diff</th><th>Tier</th><th>GUI entry</th><th>Location</th><th>Oracle</th><th>OWASP</th><th>CWE</th><th>Skill</th></tr></thead>
 <tbody>{''.join(rows)}</tbody></table></div>
 <script>
 function flt(){{var v=document.getElementById('q').value.toLowerCase();

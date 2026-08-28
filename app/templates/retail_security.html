@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block body %}<h1>Security</h1>
+<div class="dash">{% set active='security' %}{% include "_acct_side.html" with context %}
+<div class="panel">
+  <h3>Password reset</h3>
+  <form class="ajax" method="post" action="/retail/reset/request" style="display:flex;gap:6px">
+    <input name="email" placeholder="you@example.com"><button class="btn sm">Email me a reset link</button></form>
+  <form class="ajax" method="get" action="/retail/reset" style="display:flex;gap:6px;margin-top:8px">
+    <input name="email" placeholder="email"><input name="token" placeholder="reset token"><button class="btn sm">Reset</button></form>
+
+  <h3 style="margin-top:20px">Promo tokens</h3>
+  <form class="ajax" method="get" action="/retail/promo/token"><button class="btn sm">Get a promo token</button></form>
+  <form class="ajax" method="get" action="/retail/promo/claim" style="display:flex;gap:6px;margin-top:8px">
+    <input name="token" placeholder="token"><button class="btn sm">Claim</button></form>
+
+  <h3 style="margin-top:20px">Signed profile cookie</h3>
+  <p class="muted">Your profile is carried in a signed <code>profile</code> cookie. Verify it:</p>
+  <form class="ajax" method="get" action="/retail/profile/load"><button class="btn sm">Verify my profile cookie</button></form>
+
+  <h3 style="margin-top:20px">Devices</h3>
+  <p class="muted">“Remember me” issues a persistent <code>remember</code> cookie. Check who's signed in:</p>
+  <form class="ajax" method="get" action="/retail/whoami"><button class="btn sm">Who am I?</button></form>
+</div></div>{% endblock %}

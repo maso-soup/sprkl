@@ -1,0 +1,14 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Integrations</h1>
+<div class="panel">
+  <h3>Test a webhook</h3>
+  <p class="muted">We'll send a test event to your endpoint.</p>
+  <form class="ajax" method="post" action="/corporate/integrations/webhook/test" style="display:flex;gap:6px">
+    <input name="url" placeholder="https://hooks.example/…"><button class="btn sm">Send test</button></form>
+  <h3 style="margin-top:20px">FX rate sync</h3>
+  <p class="muted">Pull exchange rates from an upstream provider.</p>
+  <form class="ajax" method="post" action="/corporate/integrations/fx-sync" style="display:flex;gap:6px">
+    <input name="upstream" placeholder="https://fx.example/rates"><button class="btn sm">Sync now</button></form>
+</div>
+{% endblock %}

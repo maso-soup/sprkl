@@ -36,6 +36,7 @@ def login():
         except sqlite3.Error as e:
             rows, error = [], str(e)
         if rows:
+            _login_fail[email] = 0
             row = rows[0]
             # Oracle: authenticated, but the supplied password does NOT actually
             # match this row -> the match was achieved by injection, not creds.
@@ -45,7 +46,17 @@ def login():
                              {"email": email, "matched_user": row["email"]})
             session["uid"] = row["id"]
             session["uname"] = row["name"]
-            return redirect(url_for("retail.account"))
+            resp = redirect(url_for("retail.dashboard"))
+            if request.form.get("remember"):
+                # VULN(weak-session-token): remember cookie = base64(uid:counter)
+                import base64 as _b64
+                resp.set_cookie("remember", _b64.b64encode(f"{row['id']}:1".encode()).decode())
+            return resp
+        # VULN(credential-stuffing-no-lockout): failures are never rate-limited.
+        _login_fail[email] = _login_fail.get(email, 0) + 1
+        if _login_fail[email] >= 6:
+            engine.solve("credential-stuffing-no-lockout", actor(),
+                         {"email": email, "attempts": _login_fail[email]})
         error = error or "Invalid credentials"
     return render_template("retail_login.html", error=error)
 
@@ -287,7 +298,9 @@ def wishlist():
     # VULN(idor-wishlist): uid param overrides the session user.
     if uid is not None and a != f"user:{uid}":
         engine.leaked_canary("idor-wishlist", a, str(body))
-    return {"uid": uid, "items": body}
+    if request.args.get("format") == "json":
+        return {"uid": uid, "items": body}
+    return render_template("retail_wishlist.html", uid=uid, items=body)
 
 
 @bp.route("/account/avatar", methods=["POST"])
@@ -573,3 +586,78 @@ def wallet_transfer():
     if framed:
         engine.solve("clickjacking", a, {"framed": True})
     return render_template("wallet_transfer.html")
+
+
+@bp.route("/dashboard")
+def dashboard():
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    u = db.query("SELECT id,name,email,loyalty FROM users WHERE id=?",
+                 (session["uid"],), one=True)
+    orders = db.query("SELECT id,total,status,ref FROM orders WHERE user_id=? ORDER BY id DESC",
+                      (session["uid"],))
+    recs = db.query("SELECT id,name,flavor,price FROM products WHERE listed=1 LIMIT 3")
+    return render_template("retail_dashboard.html", u=u, orders=orders, recs=recs)
+
+
+# ==========================================================================
+# Account area GUI (each page is the natural entry point for its findings)
+# ==========================================================================
+def _require_login():
+    return None if session.get("uid") else redirect(url_for("retail.login"))
+
+
+@bp.route("/orders")
+def orders():
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    rows = db.query("SELECT id,total,status,ref FROM orders WHERE user_id=? ORDER BY id DESC",
+                    (session["uid"],))
+    return render_template("retail_orders.html", orders=rows)
+
+
+@bp.route("/giftcards")
+def giftcards():
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    rows = db.query("SELECT id,code,balance FROM giftcards WHERE owner_id=?", (session["uid"],))
+    return render_template("retail_giftcards.html", cards=rows)
+
+
+@bp.route("/wallet")
+def wallet():
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    w = db.query("SELECT balance FROM wallet WHERE user_id=?", (session["uid"],), one=True)
+    return render_template("retail_wallet.html", balance=(w["balance"] if w else 0))
+
+
+@bp.route("/referrals")
+def referrals():
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    ref = db.query("SELECT code FROM referrals WHERE owner_id=?", (session["uid"],), one=True)
+    return render_template("retail_referrals.html", code=(ref["code"] if ref else "REF-YOU"))
+
+
+@bp.route("/profile")
+def profile():
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    u = db.query("SELECT id,name,email,address FROM users WHERE id=?", (session["uid"],), one=True)
+    return render_template("retail_profile.html", u=u)
+
+
+@bp.route("/security")
+def security():
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    return render_template("retail_security.html")
+
+
+@bp.route("/orders/<int:oid>")
+def order_detail(oid):
+    if not session.get("uid"):
+        return redirect(url_for("retail.login"))
+    o = db.query("SELECT id,user_id,total,status,ref FROM orders WHERE id=?", (oid,), one=True)
+    return render_template("retail_order_detail.html", o=o, oid=oid)

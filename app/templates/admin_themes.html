@@ -1,0 +1,8 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Storefront themes</h1>
+<div class="panel">
+  <form class="ajax" method="get" action="/corporate/render" style="display:flex;gap:6px">
+    <input name="theme" value="default"><button class="btn sm">Preview theme</button></form>
+</div>
+{% endblock %}

@@ -1,10 +1,21 @@
 {% extends "base.html" %}
 {% block body %}
-<h2>Promo</h2>
-<div id="p"></div>
+<div class="hero"><h1>Summer Fizz Sale ☀️</h1><p>Up to 20% off sparkling favorites.</p></div>
+<div class="card" id="p">{{ '' }}</div>
+<div class="card" style="max-width:420px;margin-top:14px">
+  <b>Validate a promo code</b>
+  <form id="pv" style="display:flex;gap:6px;margin-top:8px"><input name="code" placeholder="SUMMER20"><button class="btn sm">Validate</button></form>
+  <pre class="result"></pre>
+</div>
 <script>
-// VULN(csp-bypass): weak CSP allows this inline script; msg reflected in.
+// VULN(csp-bypass): the msg param is reflected into this inline script under a weak CSP.
 var msg = "{{ msg|safe }}";
-document.getElementById('p').innerHTML = msg;
+if (msg) document.getElementById('p').innerHTML = msg;
+// promo validator uses the embedded key (secrets-in-js)
+document.getElementById('pv').addEventListener('submit', async e => {
+  e.preventDefault();
+  const r = await window.sprklValidatePromo(e.target.querySelector('[name=code]').value);
+  document.querySelector('.result').textContent = JSON.stringify(r, null, 2);
+});
 </script>
 {% endblock %}

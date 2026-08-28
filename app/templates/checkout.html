@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Checkout</h1>
+<div style="display:grid;grid-template-columns:1fr 320px;gap:24px">
+  <div class="panel">
+    <h3>1 · Shipping</h3>
+    <form class="ajax" method="post" action="/retail/checkout/shipping">
+      <input name="address" placeholder="Shipping address" style="width:100%"><button class="btn sm" style="margin-top:8px">Save shipping</button>
+    </form>
+    <h3 style="margin-top:18px">2 · Gift message (optional)</h3>
+    <form class="ajax" method="post" action="/retail/cart/giftmessage">
+      <input name="message" placeholder="Happy Birthday!" style="width:100%"><button class="btn sm" style="margin-top:8px">Preview note</button>
+    </form>
+    <h3 style="margin-top:18px">3 · Payment</h3>
+    <form class="ajax" method="post" action="/retail/checkout/pay">
+      <input name="card" placeholder="Card number" style="width:100%"><button class="btn sm" style="margin-top:8px">Pay now</button>
+    </form>
+    <h3 style="margin-top:18px">4 · Confirm</h3>
+    <form class="ajax" method="post" action="/retail/checkout/confirm"><button class="btn">Place order</button></form>
+  </div>
+  <div class="panel">
+    <h3>Order summary</h3>
+    {% for l in lines %}<div style="display:flex;justify-content:space-between"><span>{{ l['name'] }} ×{{ l['qty'] }}</span><span>${{ '%.2f'|format(l['line_total']) }}</span></div>{% endfor %}
+    <hr><div style="display:flex;justify-content:space-between"><b>Total</b><b>${{ '%.2f'|format(subtotal) }}</b></div>
+
+    <h3 style="margin-top:18px">Coupons</h3>
+    <form class="ajax" method="post" action="/retail/cart/apply-coupon" style="display:flex;gap:6px">
+      <input name="code" placeholder="code"><input type="hidden" name="subtotal" value="{{ subtotal }}"><button class="btn sm">Apply</button></form>
+    <p class="muted" style="margin-top:8px">Formula coupons (e.g. <code>FORMULA</code>) accept a custom discount formula:</p>
+    <form class="ajax" method="post" action="/retail/cart/apply-coupon" style="display:flex;gap:6px">
+      <input name="code" value="FORMULA"><input name="formula" placeholder="min(50, subtotal*0.2)"><input type="hidden" name="subtotal" value="{{ subtotal }}"><button class="btn sm">Apply</button></form>
+    <p class="muted" style="margin-top:8px">Redeem an encrypted coupon:</p>
+    <form class="ajax" method="get" action="/retail/coupon/decrypt" style="display:flex;gap:6px">
+      <input name="enc" placeholder="ciphertext"><button class="btn sm">Redeem</button></form>
+    <p class="muted" style="margin-top:8px">Guess a promo code:</p>
+    <form class="ajax" method="post" action="/retail/cart/guess-coupon" style="display:flex;gap:6px">
+      <input name="guess" placeholder="PROMO?"><button class="btn sm">Try</button></form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Diagnostics &amp; tools</h1>
+<div class="panel">
+  <h3>Connectivity check</h3>
+  <p class="muted">Ping a host to verify reachability.</p>
+  <form class="ajax" method="post" action="/corporate/tools/ping" style="display:flex;gap:6px">
+    <input name="host" placeholder="host or IP"><button class="btn sm">Run check</button></form>
+  <h3 style="margin-top:20px">Shipping label generator</h3>
+  <form class="ajax" method="post" action="/corporate/labels/generate" style="display:flex;gap:6px">
+    <input name="filename" placeholder="label filename"><button class="btn sm">Generate</button></form>
+</div>
+{% endblock %}

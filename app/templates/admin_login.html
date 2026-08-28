@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>SPRKL Admin — Sign in</title>
+<link rel="stylesheet" href="/static/sprkl.css">
+<style>body{background:#0a2540;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.box{background:#fff;border-radius:14px;padding:28px;width:340px}</style></head>
+<body>
+<div class="box">
+  <h2 style="letter-spacing:2px">SPRKL · ADMIN</h2>
+  <p class="muted">Staff sign-in.</p>
+  {% if error %}<p class="err">{{ error }}</p>{% endif %}
+  <form method="post" action="/corporate/login">
+    <label>Username</label><input name="username" style="width:100%">
+    <label>Password</label><input name="password" type="password" style="width:100%">
+    <button class="btn" style="width:100%;margin-top:12px">Sign in</button>
+  </form>
+</div>
+</body></html>

@@ -1,8 +1,35 @@
 {% extends "base.html" %}
+{% from "_macros.html" import can %}
 {% block body %}
-<h2>{{ p['name'] }}</h2>
-<p>{{ p['flavor'] }} — ${{ '%.2f'|format(p['price']) }}</p>
-<h3>Reviews</h3>
-{% for r in reviews %}<div class="card"><b>{{ r['author'] }}</b><br>{{ r['body']|safe }}</div>{% endfor %}
-<form method="post" action="/retail/products/{{ p['id'] }}/review"><textarea name="body"></textarea><button>Post review</button></form>
+<div style="display:grid;grid-template-columns:280px 1fr;gap:28px">
+  <div class="card">{{ can(p['flavor']) }}</div>
+  <div>
+    <h1>{{ p['name'] }}</h1>
+    <p class="muted">{{ p['flavor'] }} · sparkling water</p>
+    <div class="price" style="font-size:26px">${{ '%.2f'|format(p['price']) }}</div>
+    <p style="margin-top:12px">
+      <button class="btn" data-add-cart="{{ p['id'] }}">Add to cart</button>
+      <a class="btn ghost" href="/go?url=/product/{{ p['id'] }}">Share</a>
+    </p>
+    <details style="margin-top:14px"><summary>Technical specs</summary>
+      <form class="ajax" method="get" action="/products/{{ p['id'] }}/spec" style="display:flex;gap:6px;margin-top:8px">
+        <select name="field"><option value="flavor">Flavor</option><option value="carbonation">Carbonation</option></select>
+        <button class="btn sm">Look up</button>
+      </form>
+    </details>
+    <p style="margin-top:10px"><a href="/go/track?next=/product/{{ p['id'] }}">↗ View sourcing & sustainability</a></p>
+  </div>
+</div>
+
+<h2 style="margin-top:30px">Reviews</h2>
+{% for r in reviews %}<div class="card" style="margin:8px 0"><b>{{ r['author'] }}</b><br>{{ r['body']|safe }}</div>
+{% else %}<p class="muted">No reviews yet — be the first!</p>{% endfor %}
+
+<div class="card" style="max-width:560px;margin-top:12px">
+  <b>Write a review</b>
+  <form method="post" action="/retail/products/{{ p['id'] }}/review">
+    <textarea name="body" placeholder="What did you think?"></textarea>
+    <button class="btn sm" style="margin-top:8px">Post review</button>
+  </form>
+</div>
 {% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}<h1>Wishlist</h1>
+<div class="dash">{% set active='wishlist' %}{% include "_acct_side.html" with context %}
+<div class="panel">
+  <ul>{% for i in items %}<li>{{ i['item'] }}</li>{% else %}<li class="muted">Empty</li>{% endfor %}</ul>
+  <p class="muted">Share your wishlist: <code>/retail/wishlist?uid={{ uid }}</code></p>
+  <h3>View a shared wishlist</h3>
+  <form method="get" action="/retail/wishlist" style="display:flex;gap:6px">
+    <input name="uid" placeholder="user id"><button class="btn sm">Open</button></form>
+</div></div>{% endblock %}

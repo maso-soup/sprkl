@@ -1,0 +1,37 @@
+{% extends "admin_base.html" %}
+{% block body %}
+<h1>Users &amp; roles</h1>
+<div class="panel">
+  <table><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Org</th></tr>
+  {% for u in users %}<tr><td>{{ u['id'] }}</td><td>{{ u['name'] }}</td><td>{{ u['email'] }}</td>
+    <td>{{ u['role'] }}</td><td>{{ u['org_id'] or '—' }}</td></tr>{% endfor %}</table>
+
+  <h3 style="margin-top:18px">Change a user's role</h3>
+  <form id="rolef" style="display:flex;gap:6px">
+    <input name="id" placeholder="user id"><input name="role" value="admin">
+    <button class="btn sm">Set role</button></form>
+  <pre class="result"></pre>
+
+  <h3 style="margin-top:18px">Feature flags</h3>
+  <table><tr><th>Flag</th><th>Value</th></tr>
+  {% for f in flags %}<tr><td>{{ f['name'] }}</td><td>{{ f['value'] }}</td></tr>{% endfor %}</table>
+  <form id="flagf" style="display:flex;gap:6px;margin-top:8px">
+    <input name="name" placeholder="flag name"><input name="value" placeholder="on/off">
+    <button class="btn sm">Update flag</button></form>
+</div>
+<script>
+document.getElementById('rolef').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const id=e.target.id.value, role=e.target.role.value;
+  const r=await fetch('/api/v2/admin/users/'+id+'/role',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})});
+  document.querySelector('.result').textContent=JSON.stringify(await r.json(),null,2);
+});
+document.getElementById('flagf').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const body={}; body[e.target.name.value]=e.target.value.value;
+  // flags update uses PUT (method-based auth is only applied to GET)
+  const r=await fetch('/api/v2/admin/flags',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  alert('flags: '+JSON.stringify(await r.json()));
+});
+</script>
+{% endblock %}

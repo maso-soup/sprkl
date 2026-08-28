@@ -217,8 +217,11 @@ def newsletter_find():
     flt = request.get_json(silent=True) or {}
     # VULN(nosql-injection): operator objects passed straight to the store.
     docs = nosql.find("newsletter", flt)
-    engine.leaked_canary("nosql-search-injection", actor, str(docs))
-    return jsonify(docs)
+    # Fire only when an operator object was injected (a plain-string lookup is benign).
+    if any(isinstance(v, dict) for v in flt.values()):
+        engine.leaked_canary("nosql-search-injection", actor, str(docs))
+    public = [{k: v for k, v in d.items() if k != "secret"} for d in docs]
+    return jsonify(public)
 
 
 @bp.route("/api/v2/preferences", methods=["POST"])
