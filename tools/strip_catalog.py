@@ -15,16 +15,27 @@ RCE findings can read any path, and app/config.py names it.
 Usage: python tools/strip_catalog.py [--check]
   --check : exit non-zero if findings.runtime.yaml is stale (for CI).
 """
-import sys, os, yaml
+import sys, os, importlib.util, yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = os.path.join(ROOT, "findings.yaml")
 OUT = os.path.join(ROOT, "findings.runtime.yaml")
 
-sys.path.insert(0, ROOT)
-# Imported, not re-declared: if the oracle API starts serving another field, the
-# stripped catalog picks it up automatically instead of silently missing it.
-from app.oracle.catalog import RUNTIME_FIELDS  # noqa: E402
+
+def _runtime_fields():
+    """Read the field list from app/oracle/fields.py, loading that file directly
+    rather than importing app.oracle — a plain import would execute app/__init__.py
+    and require Flask, and this tool should need nothing but PyYAML. The list is
+    read, never re-declared: if the oracle API starts serving another field, the
+    stripped catalog picks it up instead of silently missing it."""
+    path = os.path.join(ROOT, "app", "oracle", "fields.py")
+    spec = importlib.util.spec_from_file_location("sprkl_fields", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.RUNTIME_FIELDS
+
+
+RUNTIME_FIELDS = _runtime_fields()
 
 HEADER = """\
 # ==========================================================================

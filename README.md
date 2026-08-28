@@ -108,8 +108,8 @@ a walkthrough for the other 94. The build therefore excludes `cheatsheet.html`,
 `CHEATSHEET.md`, `README.md`, `tools/` and `tests/` (see `.dockerignore`), and ships
 `findings.runtime.yaml` — generated from `findings.yaml` with the `location`, `gui`,
 `hint`, `description` and `oracle_type` fields removed — in place of the full catalog.
-`app/oracle/catalog.py:RUNTIME_FIELDS` is the single list of fields the running app is
-allowed to know; the generator imports it, so adding a field to the oracle API carries
+`app/oracle/fields.py:RUNTIME_FIELDS` is the single list of fields the running app is
+allowed to know; the generator reads it, so adding a field to the oracle API carries
 it into the image automatically. A checkout still loads the full `findings.yaml`; only
 the image falls back to the stripped copy. CI enforces both halves.
 

@@ -8,13 +8,7 @@ the rest. See config.CATALOG_PATH for which one gets loaded.
 """
 import yaml
 from .. import config
-
-# The only fields the running app is allowed to know about. The oracle API serves
-# exactly these; nothing else in app/ reads any other field. tools/strip_catalog.py
-# imports this list, so adding a field here is enough to carry it into the image.
-RUNTIME_FIELDS = ("id", "title", "family", "category", "skill",
-                  "owasp_web", "owasp_api", "cwe", "difficulty",
-                  "tier", "status")
+from .fields import RUNTIME_FIELDS  # noqa: F401 - re-exported as catalog.RUNTIME_FIELDS
 
 _cache = None
 
