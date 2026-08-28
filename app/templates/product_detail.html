@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>{{ p['name'] }}</h2>
+<p>{{ p['flavor'] }} — ${{ '%.2f'|format(p['price']) }}</p>
+<h3>Reviews</h3>
+{% for r in reviews %}<div class="card"><b>{{ r['author'] }}</b><br>{{ r['body']|safe }}</div>{% endfor %}
+<form method="post" action="/retail/products/{{ p['id'] }}/review"><textarea name="body"></textarea><button>Post review</button></form>
+{% endblock %}

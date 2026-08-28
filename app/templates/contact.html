@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Contact Us</h2>
+{% if sent %}<div class="card">Thanks — our team will be in touch.</div>{% endif %}
+<form method="post" class="card">
+<p><input name="email" placeholder="your email"></p>
+<p><input name="subject" placeholder="subject"></p>
+<p><textarea name="message" placeholder="message"></textarea></p>
+<button>Send</button></form>
+{% endblock %}

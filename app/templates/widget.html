@@ -1,0 +1,11 @@
+<!doctype html><html><body>
+<div id="w">SPRKL widget</div>
+<script>
+// VULN(postmessage-abuse): no origin check on incoming messages.
+window.addEventListener('message', function(e){
+  try { eval(e.data); } catch(err){}
+}, false);
+var boot = "{{ msg|safe }}";
+if (boot) { try { eval(boot); } catch(e){} }
+</script>
+</body></html>

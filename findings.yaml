@@ -1,0 +1,1659 @@
+# ==========================================================================
+# SPRKL — Vulnerability Findings Catalog  (SINGLE SOURCE OF TRUTH)
+# ==========================================================================
+# Every deliberately-planted vulnerability in SPRKL is one record below.
+# The application (oracle hooks), the scoring API, and the generated
+# CHEAT SHEET all read from THIS file. Nothing is defined in two places.
+#
+# Field reference:
+#   id           unique kebab-case slug (also the solve key)
+#   title        human-readable finding name
+#   family       Ptolemy family (NN-name)
+#   category     fine-grained vulnerability category
+#   skill        Ptolemy exploit skill `name` this maps to (coverage anchor)
+#   owasp_web    OWASP Web Top 10 (2021) ids
+#   owasp_api    OWASP API Top 10 (2023) ids
+#   cwe          CWE ids
+#   difficulty   1 (trivial) .. 6 (expert)
+#   tier         public | retail | corporate | api
+#   location     where in the app it lives (method + path + param)
+#   oracle_type  sink-predicate | oast | state-diff | canary
+#   status       live | na   (na = documented-but-not-implemented, with reason)
+#   hint         a nudge for the cheat sheet (not exploit steps)
+#   description  what the finding is
+# ==========================================================================
+
+findings:
+
+# --------------------------------------------------------------------------
+# 02 — ACCESS CONTROL
+# --------------------------------------------------------------------------
+  - id: idor-order-invoice
+    title: "IDOR — read another customer's order invoice"
+    family: 02-access-control
+    category: "IDOR / BOLA"
+    skill: idor-bola
+    owasp_web: [A01:2021]
+    owasp_api: [API1:2023]
+    cwe: [CWE-639]
+    difficulty: 2
+    tier: retail
+    location: "GET /retail/orders/<order_id>/invoice"
+    oracle_type: canary
+    status: live
+    hint: "Order ids are sequential; the invoice route never checks ownership."
+    description: "A logged-in customer can fetch any order's invoice PDF/HTML by id, exposing another customer's canary PII."
+
+  - id: bola-api-user
+    title: "BOLA — read any user object via REST API"
+    family: 02-access-control
+    category: "IDOR / BOLA"
+    skill: idor-bola
+    owasp_web: [A01:2021]
+    owasp_api: [API1:2023]
+    cwe: [CWE-639, CWE-566]
+    difficulty: 2
+    tier: api
+    location: "GET /api/v2/users/<id>"
+    oracle_type: canary
+    status: live
+    hint: "Object-level authorization is missing on the user endpoint."
+    description: "Any authenticated token can read any user's full record (address, loyalty, canary email)."
+
+  - id: bfla-admin-promote
+    title: "BFLA — retail token invokes admin-only promote function"
+    family: 02-access-control
+    category: "Function-Level Authorization"
+    skill: bfla
+    owasp_web: [A01:2021]
+    owasp_api: [API5:2023]
+    cwe: [CWE-285, CWE-862]
+    difficulty: 3
+    tier: api
+    location: "POST /api/v2/admin/users/<id>/role"
+    oracle_type: state-diff
+    status: live
+    hint: "The admin role-change function only hides its button; it never enforces role server-side."
+    description: "A non-admin bearer token can call the admin role-change endpoint and escalate an account."
+
+  - id: forced-browsing-reports
+    title: "Forced browsing to unlinked corporate reports"
+    family: 02-access-control
+    category: "Forced Browsing"
+    skill: forced-browsing
+    owasp_web: [A01:2021]
+    owasp_api: []
+    cwe: [CWE-425, CWE-862]
+    difficulty: 2
+    tier: corporate
+    location: "GET /corporate/reports/financials"
+    oracle_type: canary
+    status: live
+    hint: "The route is not linked anywhere but is reachable without a session."
+    description: "Sensitive financial reports are served to unauthenticated requests that guess the path."
+
+  - id: mass-assignment-role
+    title: "Mass assignment — set role/isAdmin on profile update"
+    family: 02-access-control
+    category: "Mass Assignment"
+    skill: mass-assignment
+    owasp_web: [A01:2021]
+    owasp_api: [API3:2023]
+    cwe: [CWE-915, CWE-639]
+    difficulty: 3
+    tier: retail
+    location: "PATCH /api/v2/account (JSON body)"
+    oracle_type: state-diff
+    status: live
+    hint: "The profile update binds every JSON key, including ones the form never shows."
+    description: "Adding \"role\":\"admin\" (or \"is_admin\":true) to the profile update body escalates the account."
+
+  - id: multi-tenant-leak
+    title: "Multi-tenant isolation break across corporate orgs"
+    family: 02-access-control
+    category: "Multi-Tenant Isolation"
+    skill: multi-tenant-isolation
+    owasp_web: [A01:2021]
+    owasp_api: [API1:2023]
+    cwe: [CWE-639, CWE-284]
+    difficulty: 4
+    tier: corporate
+    location: "GET /api/v2/orgs/<org_id>/orders"
+    oracle_type: canary
+    status: live
+    hint: "The org_id in the path is trusted over the org bound to your session."
+    description: "A corporate buyer for org A can enumerate org B's wholesale orders (cross-tenant canary)."
+
+  - id: http-method-tampering
+    title: "HTTP method tampering bypasses authorization"
+    family: 02-access-control
+    category: "Method Tampering"
+    skill: http-method-tampering
+    owasp_web: [A01:2021]
+    owasp_api: [API5:2023]
+    cwe: [CWE-650, CWE-285]
+    difficulty: 3
+    tier: api
+    location: "HEAD/PUT /api/v2/admin/flags"
+    oracle_type: state-diff
+    status: live
+    hint: "Only GET/POST are guarded; other verbs skip the auth filter."
+    description: "The auth decorator checks the wrong methods, so PUT reaches the admin handler unchecked."
+
+  - id: path-normalization-admin
+    title: "Path normalization bypass reaches admin console"
+    family: 02-access-control
+    category: "Path Normalization"
+    skill: path-normalization-bypass
+    owasp_web: [A01:2021, A05:2021]
+    owasp_api: []
+    cwe: [CWE-22, CWE-436]
+    difficulty: 5
+    tier: corporate
+    location: "GET /corporate/public/..%2fadmin/console"
+    oracle_type: canary
+    status: live
+    hint: "The auth gate matches on the raw path prefix before normalization."
+    description: "An encoded traversal segment slips past the \"/corporate/public\" allowlist into the admin console."
+
+  - id: idor-wishlist
+    title: "IDOR — view another customer's wishlist"
+    family: 02-access-control
+    category: "IDOR / BOLA"
+    skill: idor-bola
+    owasp_web: [A01:2021]
+    owasp_api: [API1:2023]
+    cwe: [CWE-639]
+    difficulty: 2
+    tier: retail
+    location: "GET /retail/wishlist?uid=<id>"
+    oracle_type: canary
+    status: live
+    hint: "The uid query param overrides the session user."
+    description: "Supplying another uid returns that user's private wishlist."
+
+  - id: idor-giftcard-balance
+    title: "IDOR — read another user's gift-card code and balance"
+    family: 02-access-control
+    category: "IDOR / BOLA"
+    skill: idor-bola
+    owasp_web: [A01:2021]
+    owasp_api: [API1:2023]
+    cwe: [CWE-639]
+    difficulty: 3
+    tier: retail
+    location: "GET /api/v2/giftcards/<code_id>"
+    oracle_type: canary
+    status: live
+    hint: "Gift-card ids are short and unchecked against the owner."
+    description: "Enumerating gift-card ids leaks other users' redeemable codes (canary code)."
+
+# --------------------------------------------------------------------------
+# 03 — AUTH & SESSION
+# --------------------------------------------------------------------------
+  - id: jwt-alg-none
+    title: "JWT accepted with alg=none"
+    family: 03-auth-session
+    category: "JWT"
+    skill: auth-jwt-attacks
+    owasp_web: [A07:2021, A02:2021]
+    owasp_api: [API2:2023]
+    cwe: [CWE-347]
+    difficulty: 3
+    tier: api
+    location: "Authorization: Bearer <jwt> on /api/v2/*"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The verifier honors the token's own alg header."
+    description: "Re-signing a token with alg=none (or stripping the signature) is accepted, allowing role/user forgery."
+
+  - id: jwt-weak-secret
+    title: "JWT HS256 signed with a weak, crackable secret"
+    family: 03-auth-session
+    category: "JWT"
+    skill: auth-jwt-attacks
+    owasp_web: [A07:2021, A02:2021]
+    owasp_api: [API2:2023]
+    cwe: [CWE-321, CWE-347]
+    difficulty: 4
+    tier: api
+    location: "Authorization: Bearer <jwt>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The signing key is a short dictionary word."
+    description: "The HS256 secret can be brute-forced offline, letting an attacker forge an admin token."
+
+  - id: jwt-kid-injection
+    title: "JWT kid header injection selects attacker-controlled key"
+    family: 03-auth-session
+    category: "JWT"
+    skill: auth-jwt-attacks
+    owasp_web: [A07:2021, A02:2021]
+    owasp_api: [API2:2023]
+    cwe: [CWE-347, CWE-90]
+    difficulty: 6
+    tier: api
+    location: "JWT header kid parameter"
+    oracle_type: sink-predicate
+    status: live
+    hint: "kid is concatenated into a key lookup; a traversal/known-file kid picks a predictable key."
+    description: "Pointing kid at a world-readable/static file yields a known signing key for forgery."
+
+  - id: password-reset-predictable-token
+    title: "Predictable password-reset token"
+    family: 03-auth-session
+    category: "Password Reset"
+    skill: auth-password-reset-abuse
+    owasp_web: [A07:2021]
+    owasp_api: []
+    cwe: [CWE-640, CWE-330]
+    difficulty: 4
+    tier: retail
+    location: "GET /retail/reset?token=<t>"
+    oracle_type: state-diff
+    status: live
+    hint: "The token is derived from email + a coarse timestamp with a weak hash."
+    description: "The reset token is computable, so an attacker can reset a victim's password."
+
+  - id: session-fixation
+    title: "Session not rotated on login (fixation)"
+    family: 03-auth-session
+    category: "Session Fixation"
+    skill: auth-session-fixation-hijack
+    owasp_web: [A07:2021]
+    owasp_api: []
+    cwe: [CWE-384, CWE-613]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/login (Set-Cookie behavior)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The session id you present before login survives authentication."
+    description: "A pre-set session id is not regenerated on login, enabling session fixation."
+
+  - id: weak-session-token
+    title: "Low-entropy \"remember me\" token"
+    family: 03-auth-session
+    category: "Session Token Analysis"
+    skill: auth-session-token-analysis
+    owasp_web: [A07:2021, A02:2021]
+    owasp_api: []
+    cwe: [CWE-330, CWE-331]
+    difficulty: 2
+    tier: retail
+    location: "Cookie: remember=<token>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The remember token is a reversible encoding of the user id."
+    description: "The persistent-login cookie is base64(user_id:counter); forging another user's cookie authenticates as them."
+
+  - id: mfa-bypass-skip-step
+    title: "Corporate MFA step is skippable"
+    family: 03-auth-session
+    category: "MFA Bypass"
+    skill: auth-mfa-bypass
+    owasp_web: [A07:2021]
+    owasp_api: []
+    cwe: [CWE-287, CWE-308]
+    difficulty: 4
+    tier: corporate
+    location: "POST /corporate/login then /corporate/dashboard"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The dashboard trusts a \"pre-mfa\" session that was only meant for the OTP page."
+    description: "Navigating directly past the OTP challenge lands an authenticated corporate session."
+
+  - id: oauth-redirect-abuse
+    title: "OAuth redirect_uri open-redirect leaks auth code"
+    family: 03-auth-session
+    category: "OAuth / OIDC"
+    skill: auth-oauth-oidc-abuse
+    owasp_web: [A07:2021]
+    owasp_api: [API2:2023]
+    cwe: [CWE-601, CWE-352]
+    difficulty: 5
+    tier: retail
+    location: "GET /retail/oauth/authorize?redirect_uri=<url>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "redirect_uri is not validated against a registered allowlist."
+    description: "A crafted redirect_uri sends the authorization code to an attacker-controlled collector."
+
+  - id: credential-stuffing-no-lockout
+    title: "No lockout / rate limit on login (credential stuffing)"
+    family: 03-auth-session
+    category: "Credential Attacks"
+    skill: auth-credential-attacks
+    owasp_web: [A07:2021]
+    owasp_api: []
+    cwe: [CWE-307, CWE-521]
+    difficulty: 2
+    tier: retail
+    location: "POST /retail/login"
+    oracle_type: state-diff
+    status: live
+    hint: "Failed logins are never counted."
+    description: "Unlimited login attempts allow brute-force / credential-stuffing against retail accounts."
+
+  - id: saml-signature-bypass
+    title: "SAML response signature not verified"
+    family: 03-auth-session
+    category: "SAML"
+    skill: auth-saml-attacks
+    owasp_web: [A07:2021]
+    owasp_api: []
+    cwe: [CWE-347, CWE-290]
+    difficulty: 6
+    tier: corporate
+    location: "POST /corporate/saml/acs"
+    oracle_type: na
+    status: na
+    hint: "Requires a SAML IdP flow."
+    description: "NA for this single-image build — full SAML/XML-DSig stack is out of scope; documented for completeness."
+
+# --------------------------------------------------------------------------
+# 04 — INJECTION
+# --------------------------------------------------------------------------
+  - id: sqli-login-bypass
+    title: "SQL injection auth bypass on retail login"
+    family: 04-injection
+    category: "SQL Injection"
+    skill: error-based-sqli
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89]
+    difficulty: 2
+    tier: retail
+    location: "POST /retail/login (email field)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The login query is string-built from the email field."
+    description: "A tautology in the email field authenticates without valid credentials."
+
+  - id: sqli-error-search
+    title: "Error-based SQL injection in product search"
+    family: 04-injection
+    category: "SQL Injection"
+    skill: error-based-sqli
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89]
+    difficulty: 2
+    tier: public
+    location: "GET /search?q=<term>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "A single quote in q surfaces a SQLite error containing your input."
+    description: "SQLite error text is reflected, enabling error-based extraction."
+
+  - id: sqli-union-products
+    title: "UNION-based SQL injection in catalog filter"
+    family: 04-injection
+    category: "SQL Injection"
+    skill: union-based-sqli
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89]
+    difficulty: 3
+    tier: public
+    location: "GET /products?category=<c>&sort=<s>"
+    oracle_type: canary
+    status: live
+    hint: "The sort/category values land directly in the query; column count is small."
+    description: "A UNION SELECT exfiltrates the users table (canary secret) through the product listing."
+
+  - id: sqli-blind-boolean
+    title: "Boolean-blind SQL injection in stock filter"
+    family: 04-injection
+    category: "SQL Injection"
+    skill: blind-boolean-sqli
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89]
+    difficulty: 4
+    tier: public
+    location: "GET /products?in_stock=<expr>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "No error and no data, but the result set changes truthfully."
+    description: "Response differs on true/false conditions; blind extraction of the canary is possible."
+
+  - id: sqli-time-based
+    title: "Time-based blind SQL injection in order tracking"
+    family: 04-injection
+    category: "SQL Injection"
+    skill: time-based-blind-sqli
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89]
+    difficulty: 4
+    tier: retail
+    location: "GET /retail/track?ref=<ref>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "A crafted ref can make the response hang predictably."
+    description: "The tracking lookup is injectable; a SQLite time primitive proves blind injection."
+
+  - id: sqli-second-order
+    title: "Second-order SQL injection via profile display name"
+    family: 04-injection
+    category: "SQL Injection"
+    skill: second-order-sqli
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89]
+    difficulty: 5
+    tier: retail
+    location: "PATCH /api/v2/account then admin report render"
+    oracle_type: canary
+    status: live
+    hint: "A stored display name is later concatenated into an admin-side query."
+    description: "Injection stored in the profile fires when an admin report re-uses the value in SQL."
+
+  - id: nosql-login-bypass
+    title: "NoSQL operator injection auth bypass (corporate)"
+    family: 04-injection
+    category: "NoSQL Injection"
+    skill: nosql-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-943]
+    difficulty: 3
+    tier: corporate
+    location: "POST /corporate/login (JSON body)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The corporate directory is a Mongo-style store; JSON login accepts operator objects."
+    description: "A {\"$ne\": null} / {\"$gt\":\"\"} password object bypasses corporate authentication."
+
+  - id: nosql-search-injection
+    title: "NoSQL operator injection in newsletter lookup"
+    family: 04-injection
+    category: "NoSQL Injection"
+    skill: nosql-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-943, CWE-89]
+    difficulty: 4
+    tier: api
+    location: "POST /api/v2/newsletter/find"
+    oracle_type: canary
+    status: live
+    hint: "Operator objects in the filter are passed straight to the store."
+    description: "$regex/$where style operators dump subscriber records (canary email)."
+
+  - id: os-command-injection
+    title: "OS command injection in label/invoice generator"
+    family: 04-injection
+    category: "OS Command Injection"
+    skill: os-command-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-78]
+    difficulty: 4
+    tier: corporate
+    location: "POST /corporate/labels/generate (filename field)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The filename is passed to a shell command."
+    description: "Shell metacharacters in the label filename execute injected commands."
+
+  - id: blind-command-injection
+    title: "Blind OS command injection in connectivity check"
+    family: 04-injection
+    category: "OS Command Injection"
+    skill: blind-command-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-78]
+    difficulty: 5
+    tier: corporate
+    location: "POST /corporate/tools/ping (host field)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "No output is returned, but the command still runs — make it call home."
+    description: "The host field is shelled out with no output; an OAST callback proves execution."
+
+  - id: ssti-jinja-giftmessage
+    title: "Server-side template injection in gift message"
+    family: 04-injection
+    category: "SSTI"
+    skill: ssti
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-1336, CWE-94]
+    difficulty: 4
+    tier: retail
+    location: "POST /retail/cart/giftmessage (message field)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Your message is rendered through Jinja, not just displayed."
+    description: "{{7*7}} evaluates; the gift message is passed to render_template_string."
+
+  - id: code-injection-coupon
+    title: "Code injection via eval in coupon formula"
+    family: 04-injection
+    category: "Code Injection"
+    skill: code-injection-eval
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-94, CWE-95]
+    difficulty: 5
+    tier: retail
+    location: "POST /retail/cart/apply-coupon (formula coupons)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "\"Percent-off\" formula coupons are evaluated as Python."
+    description: "A coupon whose value is a formula is passed to eval(), enabling code execution."
+
+  - id: ldap-injection
+    title: "LDAP injection in corporate employee directory"
+    family: 04-injection
+    category: "LDAP Injection"
+    skill: ldap-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-90]
+    difficulty: 4
+    tier: corporate
+    location: "GET /corporate/directory?u=<user>"
+    oracle_type: canary
+    status: live
+    hint: "The search filter is string-built; * and ) change its meaning."
+    description: "Filter metacharacters return all/other employee records (canary attribute)."
+
+  - id: xpath-injection
+    title: "XPath injection in product spec lookup"
+    family: 04-injection
+    category: "XPath Injection"
+    skill: xpath-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-643]
+    difficulty: 4
+    tier: public
+    location: "GET /products/<id>/spec?field=<f>"
+    oracle_type: canary
+    status: live
+    hint: "Specs are stored as XML; the field selector is injectable."
+    description: "An XPath payload extracts hidden nodes (canary spec) from the product XML."
+
+  - id: crlf-header-injection
+    title: "CRLF / HTTP response header injection"
+    family: 04-injection
+    category: "Header Injection"
+    skill: header-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-93, CWE-113]
+    difficulty: 4
+    tier: public
+    location: "GET /go/track?next=<url>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The value is copied into a response header verbatim."
+    description: "CRLF in the parameter injects headers (e.g., Set-Cookie) into the response."
+
+  - id: smtp-header-injection
+    title: "SMTP header injection in contact form"
+    family: 04-injection
+    category: "SMTP Header Injection"
+    skill: smtp-header-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-93]
+    difficulty: 4
+    tier: public
+    location: "POST /contact (email/subject fields)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The form fields become raw mail headers in the outbox."
+    description: "Newlines in the sender/subject inject Bcc/extra headers into the captured email."
+
+  - id: orm-injection
+    title: "ORM filter injection via crafted query param"
+    family: 04-injection
+    category: "ORM Injection"
+    skill: orm-injection
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89, CWE-564]
+    difficulty: 4
+    tier: api
+    location: "GET /api/v2/products?filter=<expr>"
+    oracle_type: canary
+    status: live
+    hint: "The filter DSL is compiled into SQL without isolating operators."
+    description: "A crafted filter expression escapes intended columns and reads restricted rows."
+
+  - id: graphql-sql-injection
+    title: "SQL injection through a GraphQL argument"
+    family: 04-injection
+    category: "GraphQL Injection"
+    skill: graphql-injection
+    owasp_web: [A03:2021]
+    owasp_api: [API3:2023]
+    cwe: [CWE-89, CWE-943]
+    difficulty: 4
+    tier: api
+    location: "POST /graphql (product(slug:) resolver)"
+    oracle_type: canary
+    status: live
+    hint: "A resolver builds SQL from a string argument."
+    description: "Injecting into a GraphQL argument reaches a string-built SQL query."
+
+  - id: oob-sqli
+    title: "Out-of-band SQL injection"
+    family: 04-injection
+    category: "SQL Injection"
+    skill: oob-sqli
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-89]
+    difficulty: 6
+    tier: public
+    location: "n/a"
+    oracle_type: na
+    status: na
+    hint: "SQLite cannot make outbound network/file calls."
+    description: "NA — OOB exfiltration needs a DB that can call out (MSSQL/Oracle/PG); SQLite cannot. Documented."
+
+# --------------------------------------------------------------------------
+# 05 — DESERIALIZATION
+# --------------------------------------------------------------------------
+  - id: python-pickle-rce
+    title: "Python pickle deserialization RCE"
+    family: 05-deserialization
+    category: "Insecure Deserialization"
+    skill: python-pickle-exploit
+    owasp_web: [A08:2021]
+    owasp_api: []
+    cwe: [CWE-502]
+    difficulty: 5
+    tier: corporate
+    location: "Cookie: prefs=<base64 pickle> / POST /corporate/prefs/import"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The preferences blob is base64 that gets unpickled."
+    description: "A crafted pickle in the prefs cookie/import executes on load (proven via OAST callback)."
+
+  - id: xxe-xml-import
+    title: "XXE in bulk product XML import"
+    family: 05-deserialization
+    category: "XXE"
+    skill: xxe-attacks
+    owasp_web: [A05:2021, A08:2021]
+    owasp_api: []
+    cwe: [CWE-611, CWE-827]
+    difficulty: 4
+    tier: corporate
+    location: "POST /corporate/inventory/import (XML body)"
+    oracle_type: canary
+    status: live
+    hint: "External entities are enabled on the import parser."
+    description: "A DOCTYPE with an external entity reads a local canary file into the import result."
+
+  - id: xxe-svg-upload
+    title: "XXE via SVG avatar upload"
+    family: 05-deserialization
+    category: "XXE"
+    skill: xxe-attacks
+    owasp_web: [A05:2021, A08:2021]
+    owasp_api: []
+    cwe: [CWE-611]
+    difficulty: 5
+    tier: retail
+    location: "POST /retail/account/avatar (SVG)"
+    oracle_type: canary
+    status: live
+    hint: "SVGs are parsed as XML with entities enabled."
+    description: "An SVG with an external entity exfiltrates a local canary on re-render."
+
+  - id: prototype-pollution
+    title: "Prototype/config pollution via recursive JSON merge"
+    family: 05-deserialization
+    category: "Prototype Pollution"
+    skill: node-prototype-pollution
+    owasp_web: [A08:2021, A03:2021]
+    owasp_api: []
+    cwe: [CWE-1321, CWE-915]
+    difficulty: 5
+    tier: api
+    location: "POST /api/v2/preferences (deep-merge)"
+    oracle_type: state-diff
+    status: live
+    hint: "A recursive merge lets you reach special keys that change global defaults."
+    description: "A Python-flavored prototype-pollution analog — a __proto__/class-style key flips a process-wide default (e.g., grants admin) via unsafe deep-merge."
+
+  - id: java-deserialization
+    title: "Java deserialization gadget chain"
+    family: 05-deserialization
+    category: "Insecure Deserialization"
+    skill: java-deserialization
+    owasp_web: [A08:2021]
+    owasp_api: []
+    cwe: [CWE-502]
+    difficulty: 6
+    tier: corporate
+    location: "n/a"
+    oracle_type: na
+    status: na
+    hint: "Requires a JVM."
+    description: "NA — Java/PHP/.NET native deserialization needs those runtimes; out of scope for a Python single image."
+
+# --------------------------------------------------------------------------
+# 06 — SSRF & REQUEST LAYER
+# --------------------------------------------------------------------------
+  - id: ssrf-basic
+    title: "SSRF via \"import image from URL\""
+    family: 06-ssrf-request-layer
+    category: "SSRF"
+    skill: ssrf-basic
+    owasp_web: [A10:2021]
+    owasp_api: [API7:2023]
+    cwe: [CWE-918]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/account/avatar-from-url (url field)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The server fetches any URL you provide."
+    description: "The avatar-from-URL feature fetches attacker-supplied URLs, including internal ones (OAST-confirmed)."
+
+  - id: ssrf-cloud-metadata
+    title: "SSRF to cloud metadata service"
+    family: 06-ssrf-request-layer
+    category: "SSRF"
+    skill: ssrf-cloud-metadata
+    owasp_web: [A10:2021]
+    owasp_api: [API7:2023]
+    cwe: [CWE-918]
+    difficulty: 4
+    tier: retail
+    location: "POST /retail/account/avatar-from-url (url=169.254.169.254)"
+    oracle_type: canary
+    status: live
+    hint: "The fetcher can reach the internal metadata IP."
+    description: "Fetching the fake 169.254.169.254 endpoint returns canary IAM credentials."
+
+  - id: ssrf-blind-webhook
+    title: "Blind SSRF in webhook tester"
+    family: 06-ssrf-request-layer
+    category: "SSRF"
+    skill: ssrf-blind
+    owasp_web: [A10:2021]
+    owasp_api: [API7:2023]
+    cwe: [CWE-918]
+    difficulty: 5
+    tier: corporate
+    location: "POST /corporate/integrations/webhook/test"
+    oracle_type: sink-predicate
+    status: live
+    hint: "No response body is shown, but the request is still made."
+    description: "The webhook tester issues a blind server-side request; an OAST hit proves SSRF."
+
+  - id: ssrf-filter-bypass
+    title: "SSRF allowlist/blacklist bypass"
+    family: 06-ssrf-request-layer
+    category: "SSRF"
+    skill: ssrf-filter-bypass
+    owasp_web: [A10:2021]
+    owasp_api: [API7:2023]
+    cwe: [CWE-918]
+    difficulty: 6
+    tier: retail
+    location: "POST /retail/account/avatar-from-url (url with bypass)"
+    oracle_type: canary
+    status: live
+    hint: "The blocklist matches \"localhost\"/\"127.0.0.1\" literally; equivalents slip through."
+    description: "Decimal IP, 0.0.0.0, [::], or a redirect bypasses the naive SSRF filter to reach metadata."
+
+  - id: host-header-poisoning
+    title: "Host header poisoning of password-reset link"
+    family: 06-ssrf-request-layer
+    category: "Host Header"
+    skill: host-header-attacks
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-644]
+    difficulty: 4
+    tier: public
+    location: "POST /retail/reset/request (Host header)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The reset email's link is built from the Host header."
+    description: "A forged Host header makes the reset link point at an attacker domain (OAST-confirmed)."
+
+  - id: web-cache-deception
+    title: "Web cache deception exposes account page"
+    family: 06-ssrf-request-layer
+    category: "Web Cache"
+    skill: web-cache-deception
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-525]
+    difficulty: 5
+    tier: retail
+    location: "GET /retail/account/profile.css (path confusion)"
+    oracle_type: canary
+    status: live
+    hint: "A fake static extension makes a private page look cacheable."
+    description: "Appending .css causes the cache layer to store the victim's private profile (canary)."
+
+  - id: web-cache-poisoning
+    title: "Web cache poisoning via unkeyed header"
+    family: 06-ssrf-request-layer
+    category: "Web Cache"
+    skill: web-cache-poisoning
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-444, CWE-349]
+    difficulty: 5
+    tier: public
+    location: "GET / (X-Forwarded-Host reflected, cache key ignores it)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "A reflected header is cached but not part of the cache key."
+    description: "Poisoning the cached homepage injects an attacker resource for later visitors."
+
+  - id: http-request-smuggling
+    title: "HTTP request smuggling"
+    family: 06-ssrf-request-layer
+    category: "Request Smuggling"
+    skill: http-request-smuggling
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-444]
+    difficulty: 6
+    tier: public
+    location: "n/a"
+    oracle_type: na
+    status: na
+    hint: "Needs a front-end/back-end proxy pair with desync."
+    description: "NA — smuggling requires a specific proxy chain; not reproducible in a single WSGI process. Documented."
+
+# --------------------------------------------------------------------------
+# 07 — CLIENT-SIDE
+# --------------------------------------------------------------------------
+  - id: reflected-xss-search
+    title: "Reflected XSS in search results"
+    family: 07-client-side
+    category: "Cross-Site Scripting"
+    skill: reflected-xss
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-79]
+    difficulty: 2
+    tier: public
+    location: "GET /search?q=<payload>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Your query is echoed into the page unescaped."
+    description: "The search term is reflected without encoding, executing injected script."
+
+  - id: stored-xss-review
+    title: "Stored XSS in product review"
+    family: 07-client-side
+    category: "Cross-Site Scripting"
+    skill: stored-xss
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-79]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/products/<id>/review"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Review bodies are rendered raw to every viewer."
+    description: "A review payload persists and executes for anyone viewing the product."
+
+  - id: dom-xss-search
+    title: "DOM-based XSS via location hash"
+    family: 07-client-side
+    category: "Cross-Site Scripting"
+    skill: dom-xss
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-79]
+    difficulty: 3
+    tier: public
+    location: "/search#<payload> (client JS)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Client JS writes location.hash into innerHTML."
+    description: "The client renders the hash unsafely; a beacon payload confirms execution via OAST."
+
+  - id: mutation-xss
+    title: "Mutation XSS bypassing the review sanitizer"
+    family: 07-client-side
+    category: "Cross-Site Scripting"
+    skill: mutation-xss
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-79, CWE-80]
+    difficulty: 5
+    tier: retail
+    location: "POST /retail/products/<id>/review (rich text)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The naive sanitizer's output is re-parsed by the browser into live markup."
+    description: "A payload that is inert until the browser mutates it defeats the allowlist sanitizer."
+
+  - id: blind-xss-contact
+    title: "Blind stored XSS fired in the admin panel"
+    family: 07-client-side
+    category: "Cross-Site Scripting"
+    skill: blind-xss
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-79]
+    difficulty: 4
+    tier: public
+    location: "POST /contact -> rendered in /corporate/support/inbox"
+    oracle_type: sink-predicate
+    status: live
+    hint: "You never see it fire; a staff view does."
+    description: "A contact message executes when an admin opens the support inbox (OAST callback)."
+
+  - id: csrf-change-email
+    title: "CSRF changes account email (no token)"
+    family: 07-client-side
+    category: "CSRF"
+    skill: csrf
+    owasp_web: [A01:2021]
+    owasp_api: []
+    cwe: [CWE-352]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/account/email"
+    oracle_type: state-diff
+    status: live
+    hint: "The state-changing form has no anti-CSRF token and accepts cross-site posts."
+    description: "A cross-site form submission changes the victim's email address."
+
+  - id: cors-misconfig
+    title: "CORS reflects any origin with credentials"
+    family: 07-client-side
+    category: "CORS"
+    skill: cors-misconfig
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-942]
+    difficulty: 3
+    tier: api
+    location: "GET /api/v2/account (ACAO reflection)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Access-Control-Allow-Origin echoes the request Origin and allows credentials."
+    description: "Any site can read authenticated API responses cross-origin."
+
+  - id: open-redirect
+    title: "Open redirect in outbound link tracker"
+    family: 07-client-side
+    category: "Open Redirect"
+    skill: open-redirect
+    owasp_web: [A01:2021]
+    owasp_api: []
+    cwe: [CWE-601]
+    difficulty: 2
+    tier: public
+    location: "GET /go?url=<url>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The url param is used as a redirect target unchecked."
+    description: "The link redirector sends users to any external URL."
+
+  - id: clickjacking
+    title: "Clickjacking — missing frame protections on funds page"
+    family: 07-client-side
+    category: "Clickjacking"
+    skill: clickjacking
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-1021]
+    difficulty: 1
+    tier: retail
+    location: "GET /retail/wallet/transfer"
+    oracle_type: sink-predicate
+    status: live
+    hint: "No X-Frame-Options / frame-ancestors on a sensitive action page."
+    description: "The wallet transfer page can be framed for UI-redress attacks."
+
+  - id: csp-bypass
+    title: "CSP bypass via permissive policy"
+    family: 07-client-side
+    category: "CSP"
+    skill: content-security-policy-bypass
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-693]
+    difficulty: 5
+    tier: public
+    location: "response Content-Security-Policy header"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The policy allows unsafe-inline / a wildcard host."
+    description: "The CSP is present but toothless, allowing injected inline script to run and beacon out."
+
+  - id: postmessage-abuse
+    title: "postMessage handler trusts any origin"
+    family: 07-client-side
+    category: "postMessage"
+    skill: postmessage-abuse
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-345, CWE-79]
+    difficulty: 5
+    tier: public
+    location: "/embed/widget (window message listener)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The message listener never checks event.origin."
+    description: "A framed widget accepts messages from any origin and acts on them (OAST-confirmed)."
+
+  - id: dangling-markup-exfil
+    title: "Dangling markup CSRF-token exfiltration"
+    family: 07-client-side
+    category: "Dangling Markup"
+    skill: dangling-markup-exfil
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-79]
+    difficulty: 5
+    tier: retail
+    location: "stored XSS sink with unclosed attribute"
+    oracle_type: sink-predicate
+    status: live
+    hint: "An unterminated attribute swallows page markup up to the next quote."
+    description: "Dangling markup leaks the page's CSRF token to an external collector."
+
+  - id: csti
+    title: "Client-side template injection in the mini-cart widget"
+    family: 07-client-side
+    category: "Client Template Injection"
+    skill: csti
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-1336, CWE-79]
+    difficulty: 4
+    tier: public
+    location: "/?ref=<expr> rendered by the client template"
+    oracle_type: sink-predicate
+    status: live
+    hint: "A tiny client template engine evaluates {{ }} from a URL param."
+    description: "Untrusted input reaches a client-side template expression, executing script."
+
+# --------------------------------------------------------------------------
+# 08 — FILE & PATH
+# --------------------------------------------------------------------------
+  - id: path-traversal-invoice
+    title: "Path traversal in invoice download"
+    family: 08-file-path
+    category: "Path Traversal / LFI"
+    skill: path-traversal-lfi
+    owasp_web: [A01:2021]
+    owasp_api: []
+    cwe: [CWE-22]
+    difficulty: 3
+    tier: retail
+    location: "GET /retail/invoices/download?file=<path>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The file param is joined to a directory without normalization."
+    description: "../ sequences escape the invoice directory to read arbitrary files (canary)."
+
+  - id: file-upload-webshell
+    title: "Unrestricted upload leads to code execution"
+    family: 08-file-path
+    category: "File Upload"
+    skill: file-upload-abuse
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-434]
+    difficulty: 4
+    tier: retail
+    location: "POST /retail/account/avatar (file)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The upload keeps your extension and is served from a path that executes templates."
+    description: "An uploaded server-side template/script is rendered on access, executing code."
+
+  - id: file-inclusion-rce
+    title: "Local file inclusion to RCE via theme param"
+    family: 08-file-path
+    category: "File Inclusion"
+    skill: file-inclusion-rce
+    owasp_web: [A03:2021]
+    owasp_api: []
+    cwe: [CWE-98, CWE-94]
+    difficulty: 5
+    tier: corporate
+    location: "GET /corporate/render?theme=<name>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The theme name is used to build an include path."
+    description: "A crafted theme name includes and executes an attacker-controlled template."
+
+  - id: zip-slip-import
+    title: "Zip-slip path traversal in bulk import"
+    family: 08-file-path
+    category: "File Upload"
+    skill: file-upload-abuse
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-22, CWE-434]
+    difficulty: 5
+    tier: corporate
+    location: "POST /corporate/inventory/import-zip"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Archive entry names are trusted during extraction."
+    description: "An archive entry named ../ writes outside the extraction directory."
+
+  - id: unrestricted-upload-type
+    title: "Content-type-only validation bypass on upload"
+    family: 08-file-path
+    category: "File Upload"
+    skill: file-upload-abuse
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-434]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/account/avatar (Content-Type spoof)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Only the declared Content-Type is checked, not the bytes."
+    description: "A spoofed Content-Type lets a non-image file through the avatar upload."
+
+# --------------------------------------------------------------------------
+# 09 — BUSINESS LOGIC
+# --------------------------------------------------------------------------
+  - id: price-tampering-negative
+    title: "Negative-quantity price tampering"
+    family: 09-business-logic
+    category: "Price / Quantity Tampering"
+    skill: price-quantity-tampering
+    owasp_web: [A04:2021]
+    owasp_api: []
+    cwe: [CWE-472, CWE-840]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/cart/update (qty field)"
+    oracle_type: state-diff
+    status: live
+    hint: "Quantity is not constrained to be positive."
+    description: "A negative quantity credits the order total, producing a payable balance below zero."
+
+  - id: coupon-reuse
+    title: "Single-use coupon can be reused"
+    family: 09-business-logic
+    category: "Coupon / Referral Abuse"
+    skill: coupon-referral-abuse
+    owasp_web: [A04:2021]
+    owasp_api: []
+    cwe: [CWE-840]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/cart/apply-coupon"
+    oracle_type: state-diff
+    status: live
+    hint: "Redemption is not recorded atomically per user."
+    description: "The same one-time coupon can be applied repeatedly for stacking discounts."
+
+  - id: race-giftcard-double-spend
+    title: "Race condition double-spends a gift card"
+    family: 09-business-logic
+    category: "Race Condition"
+    skill: race-conditions
+    owasp_web: [A04:2021]
+    owasp_api: []
+    cwe: [CWE-362, CWE-367]
+    difficulty: 5
+    tier: retail
+    location: "POST /retail/wallet/redeem (concurrent)"
+    oracle_type: state-diff
+    status: live
+    hint: "Balance check and debit are not atomic."
+    description: "Concurrent redemptions spend the same gift-card balance more than once."
+
+  - id: workflow-bypass-payment
+    title: "Checkout workflow bypass skips payment"
+    family: 09-business-logic
+    category: "Workflow Bypass"
+    skill: workflow-bypass
+    owasp_web: [A04:2021]
+    owasp_api: []
+    cwe: [CWE-840, CWE-841]
+    difficulty: 4
+    tier: retail
+    location: "POST /retail/checkout/confirm (without /pay)"
+    oracle_type: state-diff
+    status: live
+    hint: "The confirm step never verifies the payment step ran."
+    description: "Posting the confirm step directly marks an order paid without payment."
+
+  - id: rate-limit-bypass
+    title: "Rate-limit bypass via header rotation"
+    family: 09-business-logic
+    category: "Rate Limiting"
+    skill: rate-limit-bypass
+    owasp_web: [A04:2021]
+    owasp_api: [API4:2023]
+    cwe: [CWE-799, CWE-307]
+    difficulty: 4
+    tier: public
+    location: "POST /retail/cart/apply-coupon (X-Forwarded-For)"
+    oracle_type: state-diff
+    status: live
+    hint: "The limiter keys on a spoofable header."
+    description: "Rotating X-Forwarded-For resets the coupon-guess limiter, enabling brute force."
+
+  - id: referral-self-credit
+    title: "Self-referral credit loop"
+    family: 09-business-logic
+    category: "Coupon / Referral Abuse"
+    skill: coupon-referral-abuse
+    owasp_web: [A04:2021]
+    owasp_api: []
+    cwe: [CWE-840]
+    difficulty: 3
+    tier: retail
+    location: "POST /retail/referral/redeem"
+    oracle_type: state-diff
+    status: live
+    hint: "The referrer and referee are never compared."
+    description: "A user can redeem their own referral code for unlimited account credit."
+
+  - id: integer-overflow-total
+    title: "Integer/precision overflow zeroes the order total"
+    family: 09-business-logic
+    category: "Price / Quantity Tampering"
+    skill: price-quantity-tampering
+    owasp_web: [A04:2021]
+    owasp_api: []
+    cwe: [CWE-190, CWE-472]
+    difficulty: 5
+    tier: retail
+    location: "POST /retail/cart/update (very large qty)"
+    oracle_type: state-diff
+    status: live
+    hint: "A huge quantity wraps/overflows the computed total."
+    description: "An extreme quantity overflows the total calculation to a tiny or zero charge."
+
+# --------------------------------------------------------------------------
+# 10 — CRYPTO & DATA
+# --------------------------------------------------------------------------
+  - id: sensitive-data-exposure-api
+    title: "Excessive data exposure returns password hashes"
+    family: 10-crypto-data
+    category: "Sensitive Data Exposure"
+    skill: crypto-sensitive-data-exposure
+    owasp_web: [A02:2021]
+    owasp_api: [API3:2023]
+    cwe: [CWE-200, CWE-213]
+    difficulty: 2
+    tier: api
+    location: "GET /api/v2/users/<id>"
+    oracle_type: canary
+    status: live
+    hint: "The serializer returns the whole row."
+    description: "The user API leaks password hashes and internal fields (canary secret)."
+
+  - id: weak-randomness-token
+    title: "Predictable tokens from weak RNG"
+    family: 10-crypto-data
+    category: "Weak Randomness"
+    skill: crypto-weak-randomness
+    owasp_web: [A02:2021]
+    owasp_api: []
+    cwe: [CWE-330, CWE-338]
+    difficulty: 4
+    tier: retail
+    location: "coupon/reset token generation"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Tokens come from a seeded, non-crypto PRNG."
+    description: "Token sequence is predictable from a known seed, enabling forgery."
+
+  - id: padding-oracle
+    title: "CBC padding oracle on encrypted coupon"
+    family: 10-crypto-data
+    category: "Padding Oracle"
+    skill: crypto-padding-oracle
+    owasp_web: [A02:2021]
+    owasp_api: []
+    cwe: [CWE-347, CWE-696]
+    difficulty: 6
+    tier: retail
+    location: "POST /retail/cart/apply-coupon (enc= token)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "Decryption errors and padding errors are distinguishable."
+    description: "The coupon token is AES-CBC; a padding oracle allows decrypt/forge of coupons."
+
+  - id: hash-length-extension
+    title: "Hash length-extension forges a signed cookie"
+    family: 10-crypto-data
+    category: "Hash Length Extension"
+    skill: crypto-hash-length-extension
+    owasp_web: [A02:2021]
+    owasp_api: []
+    cwe: [CWE-345, CWE-347]
+    difficulty: 6
+    tier: retail
+    location: "Cookie: profile=<data>.<md5(secret||data)>"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The MAC is md5(secret || data) — extendable."
+    description: "Length-extension appends attacker fields (e.g., role=admin) to a validly-MAC'd cookie."
+
+  - id: plaintext-password-storage
+    title: "Passwords stored with unsalted MD5"
+    family: 10-crypto-data
+    category: "Sensitive Data Exposure"
+    skill: crypto-sensitive-data-exposure
+    owasp_web: [A02:2021]
+    owasp_api: []
+    cwe: [CWE-916, CWE-759]
+    difficulty: 2
+    tier: api
+    location: "derived from any user-record leak"
+    oracle_type: canary
+    status: live
+    hint: "The leaked hashes are plain MD5 of the password."
+    description: "Password hashes are unsalted MD5 and trivially cracked to the canary password."
+
+  - id: secrets-in-js
+    title: "API key hard-coded in the JS bundle"
+    family: 10-crypto-data
+    category: "Sensitive Data Exposure"
+    skill: crypto-sensitive-data-exposure
+    owasp_web: [A02:2021]
+    owasp_api: []
+    cwe: [CWE-200, CWE-798]
+    difficulty: 1
+    tier: public
+    location: "GET /static/app.js"
+    oracle_type: canary
+    status: live
+    hint: "A live API key is embedded client-side."
+    description: "The front-end bundle contains a working canary API key."
+
+  - id: weak-tls-config
+    title: "Weak TLS configuration"
+    family: 10-crypto-data
+    category: "TLS"
+    skill: crypto-weak-tls-config
+    owasp_web: [A02:2021]
+    owasp_api: []
+    cwe: [CWE-326, CWE-327]
+    difficulty: 3
+    tier: public
+    location: "n/a"
+    oracle_type: na
+    status: na
+    hint: "The app serves plain HTTP in-container; TLS is terminated elsewhere."
+    description: "NA — TLS is out of the app's scope in a single HTTP container. Documented."
+
+# --------------------------------------------------------------------------
+# 11 — CONFIG & COMPONENTS
+# --------------------------------------------------------------------------
+  - id: debug-endpoint-exposure
+    title: "Debug endpoint / console exposed"
+    family: 11-config-components
+    category: "Debug Exposure"
+    skill: config-debug-endpoint-exposure
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-489, CWE-215]
+    difficulty: 2
+    tier: public
+    location: "GET /debug"
+    oracle_type: canary
+    status: live
+    hint: "A diagnostics route dumps environment and config."
+    description: "The debug route exposes environment variables including a canary secret."
+
+  - id: default-creds-admin
+    title: "Default credentials on corporate admin"
+    family: 11-config-components
+    category: "Default Credentials"
+    skill: config-default-creds-exposed-panels
+    owasp_web: [A05:2021, A07:2021]
+    owasp_api: []
+    cwe: [CWE-1392, CWE-1188]
+    difficulty: 1
+    tier: corporate
+    location: "POST /corporate/login (admin/admin)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "A seeded admin account uses default credentials."
+    description: "The corporate admin panel accepts a well-known default username/password."
+
+  - id: verbose-error-stacktrace
+    title: "Verbose error leaks stack trace and config"
+    family: 11-config-components
+    category: "Debug Exposure"
+    skill: config-debug-endpoint-exposure
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-209, CWE-215]
+    difficulty: 1
+    tier: public
+    location: "any handler triggered to error (e.g., bad type)"
+    oracle_type: canary
+    status: live
+    hint: "Unhandled errors render a full debug traceback."
+    description: "Triggering an exception reveals a traceback with paths and a canary config value."
+
+  - id: security-headers-missing
+    title: "Missing security headers"
+    family: 11-config-components
+    category: "Security Headers"
+    skill: config-security-header-audit
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-693, CWE-1021]
+    difficulty: 1
+    tier: public
+    location: "all responses"
+    oracle_type: sink-predicate
+    status: live
+    hint: "HSTS/X-Content-Type-Options/X-Frame-Options/CSP are absent."
+    description: "Responses omit standard security headers (verified by an audit request)."
+
+  - id: known-cve-dependency
+    title: "Outdated dependency with a known CVE"
+    family: 11-config-components
+    category: "Vulnerable Components"
+    skill: components-known-cve-match
+    owasp_web: [A06:2021]
+    owasp_api: []
+    cwe: [CWE-1035, CWE-937]
+    difficulty: 3
+    tier: public
+    location: "GET /status (Server / X-Powered-By + /requirements.txt)"
+    oracle_type: canary
+    status: live
+    hint: "The advertised component version matches a public CVE."
+    description: "A version banner and exposed manifest reveal a component with a known CVE (canary token proves discovery)."
+
+  - id: exposed-backup-source
+    title: "Exposed source backup and .env"
+    family: 11-config-components
+    category: "Cloud/Storage Misconfig"
+    skill: config-cloud-storage-misconfig
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-284, CWE-538]
+    difficulty: 2
+    tier: public
+    location: "GET /backup.zip, GET /.env"
+    oracle_type: canary
+    status: live
+    hint: "Developer artifacts are served from web root."
+    description: "A source backup and .env (with a canary secret) are publicly downloadable."
+
+  - id: cloud-storage-public-listing
+    title: "Public object-store bucket listing"
+    family: 11-config-components
+    category: "Cloud/Storage Misconfig"
+    skill: config-cloud-storage-misconfig
+    owasp_web: [A05:2021]
+    owasp_api: []
+    cwe: [CWE-732, CWE-284]
+    difficulty: 3
+    tier: public
+    location: "GET /assets/?list=1 (fake S3)"
+    oracle_type: canary
+    status: live
+    hint: "The bucket allows anonymous listing."
+    description: "The object store lists all keys anonymously, exposing a private canary object."
+
+  - id: logging-monitoring-gap
+    title: "Security-relevant action is never logged"
+    family: 11-config-components
+    category: "Logging & Monitoring"
+    skill: logging-monitoring-gaps
+    owasp_web: [A09:2021]
+    owasp_api: []
+    cwe: [CWE-778, CWE-223]
+    difficulty: 3
+    tier: corporate
+    location: "POST /api/v2/admin/users/<id>/role"
+    oracle_type: state-diff
+    status: live
+    hint: "Privileged role changes leave no audit entry."
+    description: "A sensitive admin action produces no log record (proven by an empty audit trail)."
+
+# --------------------------------------------------------------------------
+# 12 — API PROTOCOL
+# --------------------------------------------------------------------------
+  - id: graphql-introspection
+    title: "GraphQL introspection enabled in production"
+    family: 12-api-protocol
+    category: "GraphQL"
+    skill: api-graphql-abuse
+    owasp_web: []
+    owasp_api: [API9:2023]
+    cwe: [CWE-1059]
+    difficulty: 2
+    tier: api
+    location: "POST /graphql (__schema query)"
+    oracle_type: canary
+    status: live
+    hint: "Introspection reveals hidden admin types/fields."
+    description: "Full schema introspection exposes an internal type carrying a canary field."
+
+  - id: graphql-bola
+    title: "GraphQL object-level authorization missing"
+    family: 12-api-protocol
+    category: "GraphQL"
+    skill: api-graphql-abuse
+    owasp_web: []
+    owasp_api: [API1:2023]
+    cwe: [CWE-285]
+    difficulty: 3
+    tier: api
+    location: "POST /graphql (user(id:) resolver)"
+    oracle_type: canary
+    status: live
+    hint: "The user resolver returns any id without an ownership check."
+    description: "Querying another user id via GraphQL returns their private data (canary)."
+
+  - id: graphql-batching-dos
+    title: "GraphQL query-depth/batching resource abuse"
+    family: 12-api-protocol
+    category: "Resource Consumption"
+    skill: api-unrestricted-resource-consumption
+    owasp_web: []
+    owasp_api: [API4:2023]
+    cwe: [CWE-770, CWE-400]
+    difficulty: 4
+    tier: api
+    location: "POST /graphql (deeply nested / batched)"
+    oracle_type: state-diff
+    status: live
+    hint: "No depth or batch limit is enforced."
+    description: "A deeply nested or aliased/batched query forces disproportionate work (measured)."
+
+  - id: rest-verb-tampering
+    title: "REST method-override verb tampering"
+    family: 12-api-protocol
+    category: "Verb Tampering"
+    skill: api-rest-verb-tampering
+    owasp_web: []
+    owasp_api: [API5:2023]
+    cwe: [CWE-650, CWE-285]
+    difficulty: 3
+    tier: api
+    location: "POST /api/v2/products/<id> (X-HTTP-Method-Override: DELETE)"
+    oracle_type: state-diff
+    status: live
+    hint: "A method-override header changes the effective verb past the auth check."
+    description: "The override header turns a permitted POST into a privileged DELETE."
+
+  - id: api-improper-inventory-v1
+    title: "Legacy /api/v1 remains exposed and unpatched"
+    family: 12-api-protocol
+    category: "Improper Inventory"
+    skill: api-improper-inventory
+    owasp_web: []
+    owasp_api: [API9:2023]
+    cwe: [CWE-1059]
+    difficulty: 3
+    tier: api
+    location: "GET /api/v1/users/<id>"
+    oracle_type: canary
+    status: live
+    hint: "The old API version lacks the fixes applied to v2."
+    description: "The deprecated v1 endpoint still serves data without v2's auth checks (canary)."
+
+  - id: api-unrestricted-resource
+    title: "Missing pagination limit dumps entire dataset"
+    family: 12-api-protocol
+    category: "Resource Consumption"
+    skill: api-unrestricted-resource-consumption
+    owasp_web: []
+    owasp_api: [API4:2023]
+    cwe: [CWE-770, CWE-400]
+    difficulty: 3
+    tier: api
+    location: "GET /api/v2/products?limit=<n>"
+    oracle_type: canary
+    status: live
+    hint: "An attacker-supplied limit is honored without a cap."
+    description: "A huge limit returns the full table including unlisted canary rows."
+
+  - id: api-unsafe-consumption
+    title: "Unsafe consumption of third-party API data"
+    family: 12-api-protocol
+    category: "Unsafe Consumption"
+    skill: api-unsafe-consumption
+    owasp_web: [A10:2021]
+    owasp_api: [API10:2023]
+    cwe: [CWE-1104, CWE-345]
+    difficulty: 5
+    tier: corporate
+    location: "POST /corporate/integrations/fx-sync (upstream URL)"
+    oracle_type: sink-predicate
+    status: live
+    hint: "The server trusts and fetches an operator-supplied upstream, then trusts its response."
+    description: "A malicious upstream (attacker URL) is fetched and its data trusted, chaining SSRF + injection (OAST)."
+
+  - id: api-websocket-auth
+    title: "WebSocket endpoint lacks origin/auth checks"
+    family: 12-api-protocol
+    category: "WebSocket"
+    skill: api-websocket-testing
+    owasp_web: [A01:2021]
+    owasp_api: [API2:2023]
+    cwe: [CWE-346, CWE-285]
+    difficulty: 4
+    tier: api
+    location: "WS /ws/notifications"
+    oracle_type: canary
+    status: live
+    hint: "The socket accepts any origin and never authenticates the subscriber."
+    description: "Connecting cross-origin without auth streams another user's notifications (canary)."

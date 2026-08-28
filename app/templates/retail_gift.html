@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Gift Message Preview</h2>
+<div class="card">{{ rendered }}</div>
+<form method="post" action="/retail/cart/giftmessage"><input name="message" value="{{ msg }}"><button>Preview</button></form>
+{% endblock %}

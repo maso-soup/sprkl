@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Sparkling water, elevated.</h1>
+<p>Crisp, bubbly, and endlessly refreshing. Explore our flavors.</p>
+<div class="grid">
+  {% for p in products %}
+  <div class="card"><b>{{ p['name'] }}</b><br><small>{{ p['flavor'] }}</small><br>${{ '%.2f'|format(p['price']) }}
+  <br><a href="/products?category={{ p['flavor'] }}">view</a></div>
+  {% endfor %}
+</div>
+{% endblock %}

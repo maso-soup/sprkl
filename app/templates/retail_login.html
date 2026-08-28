@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Customer Login</h2>
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+<form method="post" class="card">
+  <p><input name="email" placeholder="email"></p>
+  <p><input name="password" type="password" placeholder="password"></p>
+  <button>Sign in</button>
+</form>
+<small>Demo customer: alice@example.com / password1</small>
+{% endblock %}

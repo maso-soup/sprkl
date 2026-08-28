@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Welcome, {{ u['name'] }}</h2>
+<div class="card">Email: {{ u['email'] }}<br>Loyalty points: {{ u['loyalty'] }}</div>
+<p><a href="/retail/track">Track an order</a></p>
+{% endblock %}

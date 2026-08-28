@@ -1,0 +1,14 @@
+# Single-image SPRKL. `docker compose up --build` then browse http://localhost:8080
+services:
+  sprkl:
+    build: .
+    image: sprkl:latest
+    ports:
+      - "8080:8080"   # attackable storefront
+      - "9090:9090"   # oracle / scoring API (needs X-Oracle-Key)
+    environment:
+      SPRKL_ORACLE_KEY: sprkl-oracle-dev-key
+    volumes:
+      - sprkl-data:/data
+volumes:
+  sprkl-data:

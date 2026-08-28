@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Promo</h2>
+<div id="p"></div>
+<script>
+// VULN(csp-bypass): weak CSP allows this inline script; msg reflected in.
+var msg = "{{ msg|safe }}";
+document.getElementById('p').innerHTML = msg;
+</script>
+{% endblock %}

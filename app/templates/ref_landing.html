@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+<div id="ref">promo</div>
+<script>
+// VULN(csti): client template evaluates {% raw %}{{ }}{% endraw %} expressions from ref.
+var raw = {{ ref|tojson }};
+var re = new RegExp("\\{\\{(.+?)\\}\\}");
+var m = raw.match(re);
+if (m) { try { eval(m[1]); } catch(e){} }
+</script>
+{% endblock %}

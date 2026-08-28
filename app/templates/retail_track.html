@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Track Order</h2>
+<form method="get"><input name="ref" value="{{ ref }}" placeholder="SP-AAA111"><button>Track</button></form>
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+{% if order %}<div class="card">Ref {{ order['ref'] }} — status: {{ order['status'] }}</div>{% endif %}
+{% endblock %}

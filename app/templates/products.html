@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>All Flavors</h2>
+<form method="get" action="/products">
+  category <input name="category" value="{{ category }}">
+  in_stock <input name="in_stock" value="{{ in_stock }}">
+  sort <input name="sort" value="{{ sort }}">
+  <button>Filter</button>
+</form>
+{% if error %}<p class="err">DB error: {{ error }}</p>{% endif %}
+<div class="grid">
+{% for r in rows %}<div class="card"><b>{{ r['name'] }}</b><br>{{ r['flavor'] }}<br>${{ '%.2f'|format(r['price']) }}</div>{% endfor %}
+</div>
+{% endblock %}

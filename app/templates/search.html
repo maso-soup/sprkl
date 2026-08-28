@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Search</h2>
+<form method="get" action="/search"><input name="q" value="{{ q }}" placeholder="lime, berry..."><button>Search</button></form>
+{% if q %}<p>Results for: {{ reflected }}</p>{% endif %}
+{% if error %}<p class="err">DB error: {{ error }}</p>{% endif %}
+<div id="hl"></div>
+<script>
+// VULN(dom-xss): the 'hl' query param is written into innerHTML unsanitized.
+var params = new URLSearchParams(location.search);
+var hl = params.get('hl');
+if (hl) { document.getElementById('hl').innerHTML = hl; }
+</script>
+<div class="grid">
+{% for r in rows %}<div class="card"><b>{{ r['name'] }}</b><br>{{ r['flavor'] }}<br>${{ '%.2f'|format(r['price']) }}</div>{% endfor %}
+</div>
+{% endblock %}
