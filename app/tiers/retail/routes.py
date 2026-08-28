@@ -61,6 +61,34 @@ def login():
     return render_template("retail_login.html", error=error)
 
 
+@bp.route("/register", methods=["GET", "POST"])
+def register():
+    error = None
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        if not (name and email and password):
+            error = "Name, email, and password are all required."
+        elif db.query("SELECT id FROM users WHERE email=?", (email,), one=True):
+            error = "An account with that email already exists."
+        else:
+            secret = "SPRKL-CANARY-USER-" + os.urandom(4).hex()
+            uid = db.execute(
+                "INSERT INTO users (email,password,pw_md5,name,role,loyalty,secret) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (email, password, _md5(password), name, "customer", 0, secret))
+            # keep the (deliberately weak) canary model consistent for new accounts
+            engine.register_canary(secret, owner=f"user:{uid}", kind="user-secret")
+            db.execute("INSERT INTO wallet (user_id,balance) VALUES (?,0)", (uid,))
+            db.execute("INSERT INTO referrals (code,owner_id,redeemed_by) VALUES (?,?,NULL)",
+                       (f"REF-{uid}", uid))
+            session["uid"] = uid
+            session["uname"] = name
+            return redirect(url_for("retail.dashboard"))
+    return render_template("retail_register.html", error=error)
+
+
 @bp.route("/account")
 def account():
     if not session.get("uid"):

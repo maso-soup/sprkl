@@ -58,3 +58,27 @@ def test_admin_login_default_creds_reaches_console(server):
     s.post(f"{b}/admin/login", data={"username": "admin", "password": "admin"})
     console = s.get(f"{b}/admin/console")
     assert console.status_code == 200 and "Admin Dashboard" in console.text
+
+
+def test_register_creates_usable_account(server):
+    import time
+    s = requests.Session()
+    b = server["base"]
+    # signup page renders and does NOT print plaintext demo creds
+    page = s.get(f"{b}/retail/register")
+    assert page.status_code == 200 and "Create your account" in page.text
+    assert "password1" not in s.get(f"{b}/retail/login").text  # demo creds removed
+    # register a fresh account -> logged straight in
+    email = f"tester{int(time.time()*1000)}@example.com"
+    r = s.post(f"{b}/retail/register",
+               data={"name": "Test Tester", "email": email, "password": "hunter2!"})
+    assert s.get(f"{b}/retail/dashboard").status_code == 200
+    assert "Hi, Test" in s.get(f"{b}/").text
+    # the new account is real: log out, then log back in with those credentials
+    s.get(f"{b}/logout")
+    s.post(f"{b}/retail/login", data={"email": email, "password": "hunter2!"})
+    assert s.get(f"{b}/retail/dashboard").status_code == 200
+    # duplicate email is rejected
+    dup = requests.post(f"{b}/retail/register",
+                        data={"name": "X", "email": email, "password": "x"})
+    assert "already exists" in dup.text
