@@ -77,7 +77,7 @@ def run():
     # mass assignment
     requests.patch(f"{BASE}/api/v2/account", json={"role": "admin"}, headers=hdr)
     # multi-tenant: carol (org100) reads org200
-    ct = requests.post(f"{BASE}/api/v2/login", json={"email": "carol@sprkl-corp.com", "password": "Spring2024!"}).json()["token"]
+    ct = requests.post(f"{BASE}/api/v2/login", json={"email": "carol@sprkl-corp.com", "password": "Summer2026!"}).json()["token"]
     requests.get(f"{BASE}/api/v2/orgs/200/orders", headers={"Authorization": f"Bearer {ct}"})
 
     # ---------- 03 AUTH ----------
@@ -185,7 +185,7 @@ def run():
     wf = new(); wf.post(f"{BASE}/retail/checkout/confirm")
     rl = new()
     for i in range(12): rl.post(f"{BASE}/retail/cart/guess-coupon", headers={"X-Forwarded-For": f"10.0.0.{i}"})
-    rf = new(); rf.post(f"{BASE}/retail/login", data={"email": "carol@sprkl-corp.com", "password": "Spring2024!"})
+    rf = new(); rf.post(f"{BASE}/retail/login", data={"email": "carol@sprkl-corp.com", "password": "Summer2026!"})
     rf.post(f"{BASE}/retail/referral/redeem", data={"code": "REF-CAROL"})
     # race
     def redeem(): new().post(f"{BASE}/retail/wallet/redeem", data={"code": "GC-ALICE-1", "uid": "1"})

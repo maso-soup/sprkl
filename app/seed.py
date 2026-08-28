@@ -35,9 +35,9 @@ def seed():
          "12 Fizz Lane", 120),
         (2, "bob@example.com", "hunter2", "Bob Bubbles", "customer", None,
          "9 Seltzer St", 40),
-        (3, "carol@sprkl-corp.com", "Spring2024!", "Carol Corp", "buyer", 100,
+        (3, "carol@sprkl-corp.com", "Summer2026!", "Carol Corp", "buyer", 100,
          "1 Corporate Way", 0),
-        (4, "dave@rival-corp.com", "Rival2024!", "Dave Rival", "buyer", 200,
+        (4, "dave@rival-corp.com", "Rival2026!", "Dave Rival", "buyer", 200,
          "5 Rival Rd", 0),
         (5, "admin@sprkl-corp.com", "admin", "SPRKL Admin", "admin", 100,
          "HQ", 0),
@@ -121,7 +121,7 @@ def seed():
 
     # ---- backend fakes ----
     nosql.seed("corp_users", [
-        {"username": "carol", "password": "Spring2024!", "org": 100, "role": "buyer"},
+        {"username": "carol", "password": "Summer2026!", "org": 100, "role": "buyer"},
         {"username": "admin", "password": "admin", "org": 100, "role": "admin",
          "secret": CANARY.format("CORP-ADMIN")},
     ])
