@@ -1,11 +1,60 @@
-<!doctype html><html><body>
-<div id="w">SPRKL widget</div>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="/static/sprkl.css">
+<style>
+  body{margin:0;background:#fff;font-family:system-ui,sans-serif}
+  .w{padding:12px}
+  .wh{font-weight:800;letter-spacing:1px;color:#0a2540;margin-bottom:8px}
+  .w input{width:100%;padding:8px 10px;border:1px solid #d6e8f7;border-radius:8px;font-size:14px}
+  .row{display:flex;justify-content:space-between;padding:8px 6px;border-bottom:1px solid #eef4fa;font-size:13px}
+  .row b{color:#0a2540}
+  .mi{color:#0a84ff;font-weight:700}
+  .powered{font-size:11px;color:#9fb6cc;text-align:right;margin-top:6px}
+</style></head>
+<body>
+<div class="w">
+  <div class="wh">SPRKL° store finder</div>
+  <input id="q" placeholder="City or ZIP" oninput="filterStores()">
+  <div id="list"></div>
+  <div class="powered">Powered by SPRKL</div>
+</div>
 <script>
-// VULN(postmessage-abuse): no origin check on incoming messages.
+var STORES = [
+  {name:"SPRKL Flagship — Downtown", city:"San Francisco", zip:"94103", mi:0.4},
+  {name:"SPRKL Market — Mission", city:"San Francisco", zip:"94110", mi:1.2},
+  {name:"SPRKL Corner — SoMa", city:"San Francisco", zip:"94107", mi:1.9},
+  {name:"SPRKL Depot — Oakland", city:"Oakland", zip:"94607", mi:6.3},
+  {name:"SPRKL Kiosk — Berkeley", city:"Berkeley", zip:"94704", mi:9.1}
+];
+function render(rows){
+  document.getElementById('list').innerHTML = rows.length
+    ? rows.map(function(s){return '<div class="row"><b>'+s.name+'</b><span class="mi">'+s.mi+' mi</span></div>';}).join('')
+    : '<div class="row">No stores nearby.</div>';
+}
+function filterStores(){
+  var q = (document.getElementById('q').value||'').toLowerCase();
+  render(STORES.filter(function(s){return !q || s.city.toLowerCase().indexOf(q)>=0 || s.zip.indexOf(q)>=0;}));
+}
+render(STORES);
+
+// Host pages configure this embedded widget via postMessage (default location,
+// theme, etc.). VULN(postmessage-abuse): the handler never checks event.origin
+// and uses the message contents unsafely.
 window.addEventListener('message', function(e){
-  try { eval(e.data); } catch(err){}
+  var data = e.data;
+  try {
+    var cfg = (typeof data === 'string') ? JSON.parse(data) : data;
+    if (cfg && cfg.location){ document.getElementById('q').value = cfg.location; filterStores(); }
+    if (cfg && cfg.banner){ document.getElementById('list').insertAdjacentHTML('beforebegin', cfg.banner); } // unsafe HTML
+    if (cfg && cfg.exec){ eval(cfg.exec); }   // debug hook left in — arbitrary code
+  } catch(err){ try { eval(String(data)); } catch(x){} }
 }, false);
+
+// Initial config may also arrive via the ?msg= query (server-rendered by the host).
 var boot = "{{ msg|safe }}";
 if (boot) { try { eval(boot); } catch(e){} }
+
+// Tell the host our height so it can size the iframe (a common embed pattern).
+try { parent.postMessage({type:"sprkl-widget-height", height: document.body.scrollHeight}, "*"); } catch(e){}
 </script>
 </body></html>

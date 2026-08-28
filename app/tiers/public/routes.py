@@ -231,9 +231,21 @@ def support():
     return render_template("contact.html", sent=False)
 
 
+STORES = [
+    {"name": "SPRKL Flagship — Downtown", "addr": "12 Fizz Lane", "city": "San Francisco", "zip": "94103", "hours": "9am–9pm", "miles": 0.4, "x": 28, "y": 42},
+    {"name": "SPRKL Market — Mission", "addr": "9 Seltzer St", "city": "San Francisco", "zip": "94110", "hours": "8am–10pm", "miles": 1.2, "x": 52, "y": 60},
+    {"name": "SPRKL Corner — SoMa", "addr": "1 Bubbly Blvd", "city": "San Francisco", "zip": "94107", "hours": "7am–11pm", "miles": 1.9, "x": 68, "y": 34},
+    {"name": "SPRKL Depot — Oakland", "addr": "5 Carbonation Ct", "city": "Oakland", "zip": "94607", "hours": "9am–8pm", "miles": 6.3, "x": 42, "y": 72},
+    {"name": "SPRKL Kiosk — Berkeley", "addr": "3 Effervescence Ave", "city": "Berkeley", "zip": "94704", "hours": "10am–7pm", "miles": 9.1, "x": 80, "y": 20},
+]
+
+
 @bp.route("/store-locator")
 def store_locator():
-    return render_template("store_locator.html")
+    near = request.args.get("near", "")
+    q = near.strip().lower()
+    stores = [s for s in STORES if not q or q in s["city"].lower() or q in s["zip"]]
+    return render_template("store_locator.html", stores=stores, near=near)
 
 
 @bp.route("/newsletter", methods=["POST"])
