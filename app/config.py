@@ -4,7 +4,15 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.environ.get("SPRKL_DATA", os.path.join(BASE_DIR, "instance"))
 DB_PATH = os.path.join(DATA_DIR, "sprkl.db")
-CATALOG_PATH = os.path.join(BASE_DIR, "findings.yaml")
+# Findings catalog. The full findings.yaml is the source of truth and is present
+# in a checkout, so local dev loads it. The container image ships only the stripped
+# findings.runtime.yaml (see tools/strip_catalog.py), so there the fallback wins and
+# no answer key sits on disk for a file-read finding to reach. SPRKL_CATALOG_PATH
+# overrides both.
+_FULL_CATALOG = os.path.join(BASE_DIR, "findings.yaml")
+_RUNTIME_CATALOG = os.path.join(BASE_DIR, "findings.runtime.yaml")
+CATALOG_PATH = os.environ.get("SPRKL_CATALOG_PATH") or (
+    _FULL_CATALOG if os.path.exists(_FULL_CATALOG) else _RUNTIME_CATALOG)
 
 # Ports
 APP_PORT = int(os.environ.get("SPRKL_APP_PORT", "8080"))       # attackable storefront

@@ -29,12 +29,8 @@ def create_oracle_app():
     @app.route("/oracle/findings")
     def findings():
         # catalog without exploit steps (id/title/meta only)
-        out = []
-        for f in catalog.all_findings():
-            out.append({k: f.get(k) for k in
-                        ("id", "title", "family", "category", "skill",
-                         "owasp_web", "owasp_api", "cwe", "difficulty",
-                         "tier", "status")})
+        out = [{k: f.get(k) for k in catalog.RUNTIME_FIELDS}
+               for f in catalog.all_findings()]
         return jsonify({"count": len(out), "findings": out})
 
     @app.route("/oracle/solves")

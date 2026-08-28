@@ -25,6 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The image must never contain the answer key, so the generated runtime
+      # catalog has to be current before we build from it.
+      - name: Verify findings.runtime.yaml is current
+        run: |
+          pip install -q pyyaml
+          python tools/strip_catalog.py --check
+
       - uses: docker/setup-qemu-action@v3        # emulation for arm64
       - uses: docker/setup-buildx-action@v3
 
@@ -59,6 +66,14 @@ jobs:
           curl -fsS "http://localhost:8080/search?q=lime%27" >/dev/null
           curl -fsS -H 'X-Oracle-Key: ci-smoke-key' http://localhost:9090/oracle/solves \
             | grep -q 'sqli-error-search'
+          echo "== no answer key inside the image =="
+          for f in cheatsheet.html CHEATSHEET.md README.md findings.yaml tools tests; do
+            if docker exec sprkl test -e "/app/$f"; then
+              echo "FAIL: /app/$f is in the image — a file-read finding could leak it"
+              exit 1
+            fi
+          done
+          test -z "$(docker exec sprkl grep -rl 'oracle_type' /app 2>/dev/null)"
           echo "smoke test passed"
           docker rm -f sprkl >/dev/null
 

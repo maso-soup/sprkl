@@ -95,14 +95,31 @@ because the app is deliberately stateful.
 ```bash
 ./.venv/bin/python tools/gen_cheatsheet.py           # rewrite CHEATSHEET.md + cheatsheet.html
 ./.venv/bin/python tools/gen_cheatsheet.py --check    # CI: fail if stale
+
+./.venv/bin/python tools/strip_catalog.py            # rewrite findings.runtime.yaml
+./.venv/bin/python tools/strip_catalog.py --check    # CI: fail if stale
 ```
+
+### What ships in the image
+
+The container must not carry its own answer key: SPRKL has live path-traversal, file-
+inclusion and RCE findings, so anything readable at `/app` is one solve away from being
+a walkthrough for the other 94. The build therefore excludes `cheatsheet.html`,
+`CHEATSHEET.md`, `README.md`, `tools/` and `tests/` (see `.dockerignore`), and ships
+`findings.runtime.yaml` — generated from `findings.yaml` with the `location`, `gui`,
+`hint`, `description` and `oracle_type` fields removed — in place of the full catalog.
+`app/oracle/catalog.py:RUNTIME_FIELDS` is the single list of fields the running app is
+allowed to know; the generator imports it, so adding a field to the oracle API carries
+it into the image automatically. A checkout still loads the full `findings.yaml`; only
+the image falls back to the stripped copy. CI enforces both halves.
 
 ## Layout
 ```
 app/            Flask app factory, tiers/ (public·retail·corporate), api/ (rest·graphql),
                 backends/ (in-process fakes), oracle/ (engine·collab·catalog·api)
 findings.yaml   single source of truth for all findings
-tools/          cheat-sheet generator
+findings.runtime.yaml  GENERATED stripped catalog — the copy that ships in the image
+tools/          cheat-sheet + runtime-catalog generators
 tests/          per-finding solve-scripts + full sweep + negative test
 Dockerfile · docker-compose.yml · serve.py
 ```
