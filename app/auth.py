@@ -85,8 +85,8 @@ def api_identity():
     if session.get("uid"):
         u = db.query("SELECT role FROM users WHERE id=?", (session["uid"],), one=True)
         return session["uid"], (u["role"] if u else "customer"), f"user:{session['uid']}", {"vuln": None}
-    if session.get("corp"):
-        cid = session["corp"]
+    if session.get("admin"):
+        cid = session["admin"]
         u = db.query("SELECT role FROM users WHERE id=?", (cid,), one=True)
         return cid, (u["role"] if u else "buyer"), f"user:{cid}", {"vuln": None}
     return None, None, session_actor(), {"vuln": None}

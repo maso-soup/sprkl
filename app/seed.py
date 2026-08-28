@@ -120,7 +120,7 @@ def seed():
         _fh.write(CANARY.format("XXE-FILE"))
 
     # ---- backend fakes ----
-    nosql.seed("corp_users", [
+    nosql.seed("admin_users", [
         {"username": "carol", "password": "Summer2026!", "org": 100, "role": "buyer"},
         {"username": "admin", "password": "admin", "org": 100, "role": "admin",
          "secret": CANARY.format("CORP-ADMIN")},
@@ -153,7 +153,7 @@ def _register_canaries():
     for r in db.query("SELECT user_id, secret FROM wishlists"):
         engine.register_canary(r["secret"], owner=f"user:{r['user_id']}", kind="wishlist-secret")
     # backend + file canaries owned by 'system' (any non-owner leak counts)
-    for tok in ["CORP-ADMIN", "NL-1", "NL-2", "LDAP-ADMIN", "BUCKET-PAYROLL",
+    for tok in ["CORP-ADMIN", "ADMIN-CONSOLE", "NL-1", "NL-2", "LDAP-ADMIN", "BUCKET-PAYROLL",
                 "ENV-SECRET", "DEBUG-SECRET", "JSKEY"]:
         engine.register_canary(CANARY.format(tok), owner="system", kind="planted")
     engine.register_canary("SPRKL-CANARY-JSKEY-9c1f2a", owner="system", kind="js-key")

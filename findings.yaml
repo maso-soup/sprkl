@@ -89,8 +89,8 @@ findings:
     cwe: [CWE-425, CWE-862]
     difficulty: 2
     tier: corporate
-    location: "GET /corporate/reports/financials"
-    gui: "Force-browse /corporate/reports/financials"
+    location: "GET /admin/reports/financials"
+    gui: "Force-browse /admin/reports/financials"
     oracle_type: canary
     status: live
     hint: "The route is not linked anywhere but is reachable without a session."
@@ -157,12 +157,12 @@ findings:
     cwe: [CWE-22, CWE-436]
     difficulty: 5
     tier: corporate
-    location: "GET /corporate/public/..%2fadmin/console"
-    gui: "Force-browse /corporate/public/..%2fadmin/console"
+    location: "GET /admin/public/..%2fadmin/console"
+    gui: "Force-browse /admin/public/..%2fadmin/console"
     oracle_type: canary
     status: live
     hint: "The auth gate matches on the raw path prefix before normalization."
-    description: "An encoded traversal segment slips past the \"/corporate/public\" allowlist into the admin console."
+    description: "An encoded traversal segment slips past the \"/admin/public\" allowlist into the admin console."
 
   - id: idor-wishlist
     title: "IDOR — view another customer's wishlist"
@@ -313,7 +313,7 @@ findings:
     cwe: [CWE-287, CWE-308]
     difficulty: 4
     tier: corporate
-    location: "POST /corporate/login then /corporate/dashboard"
+    location: "POST /admin/login then /admin/dashboard"
     gui: "Admin sign-in → skip the OTP step"
     oracle_type: sink-predicate
     status: live
@@ -364,7 +364,7 @@ findings:
     cwe: [CWE-347, CWE-290]
     difficulty: 6
     tier: corporate
-    location: "POST /corporate/saml/acs"
+    location: "POST /admin/saml/acs"
     gui: "n/a"
     oracle_type: na
     status: na
@@ -486,8 +486,8 @@ findings:
     cwe: [CWE-943]
     difficulty: 3
     tier: corporate
-    location: "POST /corporate/login (JSON body)"
-    gui: "Admin JSON login /corporate/api/login"
+    location: "POST /admin/login (JSON body)"
+    gui: "Admin JSON login /admin/api/login"
     oracle_type: sink-predicate
     status: live
     hint: "The corporate directory is a Mongo-style store; JSON login accepts operator objects."
@@ -520,7 +520,7 @@ findings:
     cwe: [CWE-78]
     difficulty: 4
     tier: corporate
-    location: "POST /corporate/labels/generate (filename field)"
+    location: "POST /admin/labels/generate (filename field)"
     gui: "Admin → Tools → Shipping label generator"
     oracle_type: sink-predicate
     status: live
@@ -537,7 +537,7 @@ findings:
     cwe: [CWE-78]
     difficulty: 5
     tier: corporate
-    location: "POST /corporate/tools/ping (host field)"
+    location: "POST /admin/tools/ping (host field)"
     gui: "Admin → Tools → Connectivity check"
     oracle_type: sink-predicate
     status: live
@@ -588,7 +588,7 @@ findings:
     cwe: [CWE-90]
     difficulty: 4
     tier: corporate
-    location: "GET /corporate/directory?u=<user>"
+    location: "GET /admin/directory?u=<user>"
     gui: "Admin → Employees directory search"
     oracle_type: canary
     status: live
@@ -710,7 +710,7 @@ findings:
     cwe: [CWE-502]
     difficulty: 5
     tier: corporate
-    location: "Cookie: prefs=<base64 pickle> / POST /corporate/prefs/import"
+    location: "Cookie: prefs=<base64 pickle> / POST /admin/prefs/import"
     gui: "Admin → Preferences → Import (base64 blob)"
     oracle_type: sink-predicate
     status: live
@@ -727,7 +727,7 @@ findings:
     cwe: [CWE-611, CWE-827]
     difficulty: 4
     tier: corporate
-    location: "POST /corporate/inventory/import (XML body)"
+    location: "POST /admin/inventory/import (XML body)"
     gui: "Admin → Inventory → Bulk import (XML)"
     oracle_type: canary
     status: live
@@ -832,7 +832,7 @@ findings:
     cwe: [CWE-918]
     difficulty: 5
     tier: corporate
-    location: "POST /corporate/integrations/webhook/test"
+    location: "POST /admin/integrations/webhook/test"
     gui: "Admin → Integrations → Test a webhook"
     oracle_type: sink-predicate
     status: live
@@ -1005,7 +1005,7 @@ findings:
     cwe: [CWE-79]
     difficulty: 4
     tier: public
-    location: "POST /contact -> rendered in /corporate/support/inbox"
+    location: "POST /contact -> rendered in /admin/support/inbox"
     gui: "Support/Contact form → renders in Admin → Support Inbox"
     oracle_type: sink-predicate
     status: live
@@ -1195,7 +1195,7 @@ findings:
     cwe: [CWE-98, CWE-94]
     difficulty: 5
     tier: corporate
-    location: "GET /corporate/render?theme=<name>"
+    location: "GET /admin/render?theme=<name>"
     gui: "Admin → Themes → Preview theme"
     oracle_type: sink-predicate
     status: live
@@ -1212,7 +1212,7 @@ findings:
     cwe: [CWE-22, CWE-434]
     difficulty: 5
     tier: corporate
-    location: "POST /corporate/inventory/import-zip"
+    location: "POST /admin/inventory/import-zip"
     gui: "Admin → Inventory → Bulk import (ZIP)"
     oracle_type: sink-predicate
     status: live
@@ -1510,7 +1510,7 @@ findings:
     cwe: [CWE-1392, CWE-1188]
     difficulty: 1
     tier: corporate
-    location: "POST /corporate/login (admin/admin)"
+    location: "POST /admin/login (admin/admin)"
     gui: "/admin (admin/admin)"
     oracle_type: sink-predicate
     status: live
@@ -1734,7 +1734,7 @@ findings:
     cwe: [CWE-1104, CWE-345]
     difficulty: 5
     tier: corporate
-    location: "POST /corporate/integrations/fx-sync (upstream URL)"
+    location: "POST /admin/integrations/fx-sync (upstream URL)"
     gui: "Admin → Integrations → FX rate sync"
     oracle_type: sink-predicate
     status: live

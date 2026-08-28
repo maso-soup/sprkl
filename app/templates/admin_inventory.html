@@ -9,14 +9,14 @@
   <pre class="result"></pre>
 
   <h3 style="margin-top:20px">Bulk import (ZIP archive)</h3>
-  <form class="ajax" method="post" action="/corporate/inventory/import-zip" enctype="multipart/form-data" style="display:flex;gap:6px">
+  <form class="ajax" method="post" action="/admin/inventory/import-zip" enctype="multipart/form-data" style="display:flex;gap:6px">
     <input type="file" name="file"><button class="btn sm">Upload archive</button>
   </form>
 </div>
 <script>
 async function importXml(){
   const out=document.querySelector('.result');
-  const r=await fetch('/corporate/inventory/import',{method:'POST',headers:{'Content-Type':'application/xml'},body:document.getElementById('xml').value});
+  const r=await fetch('/admin/inventory/import',{method:'POST',headers:{'Content-Type':'application/xml'},body:document.getElementById('xml').value});
   out.textContent=JSON.stringify(await r.json(),null,2);
 }
 </script>

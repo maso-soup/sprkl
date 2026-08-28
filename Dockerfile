@@ -2,6 +2,11 @@
 # Ships the attackable app (8080) and the oracle/scoring API (9090) in one container.
 FROM python:3.13-slim
 
+# OCI labels. image.source makes the GHCR package auto-link back to the repo.
+LABEL org.opencontainers.image.title="SPRKL" \
+      org.opencontainers.image.description="Intentionally vulnerable storefront + server-side oracle; a Juice-Shop-style benchmark target." \
+      org.opencontainers.image.source="https://github.com/maso-soup/sprkl"
+
 # A deliberately-outdated component banner is advertised at runtime (see /status);
 # curl is present so blind-command-injection has a callback tool, matching a
 # realistic corporate box.

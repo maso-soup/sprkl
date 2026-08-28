@@ -30,19 +30,18 @@ def create_app():
         cart = session.get("cart", [])
         return {
             "current_user": user,
-            "current_admin": session.get("corp"),
-            "current_admin_role": session.get("corp_role"),
+            "current_admin": session.get("admin"),
+            "current_admin_role": session.get("admin_role"),
             "cart_count": sum(int(i.get("qty", 0)) for i in cart),
         }
 
     from .tiers.public.routes import bp as public_bp
     from .tiers.retail.routes import bp as retail_bp
-    from .tiers.corporate.routes import bp as corporate_bp
     from .api.rest.routes import bp as api_rest_bp
     from .api.graphql.routes import bp as graphql_bp
     from .extras import bp as extras_bp
     from .tiers.admin.routes import bp as admin_bp
-    for b in (public_bp, retail_bp, corporate_bp, api_rest_bp, graphql_bp, extras_bp, admin_bp):
+    for b in (public_bp, retail_bp, api_rest_bp, graphql_bp, extras_bp, admin_bp):
         app.register_blueprint(b)
 
     # ---- session lifecycle ----
@@ -54,8 +53,8 @@ def create_app():
 
     @app.route("/admin/logout", methods=["GET", "POST"])
     def admin_logout():
-        session.pop("corp", None)
-        session.pop("corp_role", None)
+        session.pop("admin", None)
+        session.pop("admin_role", None)
         session.pop("pre_mfa", None)
         return redirect("/admin")
 

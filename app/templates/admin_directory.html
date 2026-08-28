@@ -2,7 +2,10 @@
 {% block body %}
 <h1>Employee directory</h1>
 <div class="panel">
-  <form class="ajax" method="get" action="/corporate/directory" style="display:flex;gap:6px">
-    <input name="u" placeholder="username"><button class="btn sm">Search</button></form>
+  <form method="get" action="/admin/directory" style="display:flex;gap:6px">
+    <input name="u" value="{{ u or '' }}" placeholder="username"><button class="btn sm">Search</button></form>
+  {% if results is not none %}
+  <pre class="result">{{ results }}</pre>
+  {% endif %}
 </div>
 {% endblock %}

@@ -55,6 +55,6 @@ def test_admin_is_hidden_but_reachable(server):
 def test_admin_login_default_creds_reaches_console(server):
     s = requests.Session()
     b = server["base"]
-    s.post(f"{b}/corporate/login", data={"username": "admin", "password": "admin"})
+    s.post(f"{b}/admin/login", data={"username": "admin", "password": "admin"})
     console = s.get(f"{b}/admin/console")
     assert console.status_code == 200 and "Admin Dashboard" in console.text

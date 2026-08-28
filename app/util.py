@@ -12,8 +12,8 @@ def actor():
     """
     if session.get("uid"):
         return f"user:{session['uid']}"
-    if session.get("corp"):
-        return f"corp:{session['corp']}"
+    if session.get("admin"):
+        return f"admin:{session['admin']}"
     sid = session.get("sid")
     if not sid:
         sid = session["sid"] = os.urandom(8).hex()

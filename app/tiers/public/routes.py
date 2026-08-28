@@ -137,7 +137,7 @@ def contact():
         msg = smtp.send("support@sprkl.example", subject, message, extra_headers=extra)
         if any(h.lower() in (k.lower() for k in msg["headers"]) for h in ["bcc", "cc"]):
             engine.solve("smtp-header-injection", a, {"headers": list(msg["headers"])})
-        # store for the corporate support inbox (blind-xss landing)
+        # store for the admin support inbox (blind-xss landing)
         db.execute("INSERT INTO contacts (email,subject,message,actor) VALUES (?,?,?,?)",
                    (email, subject, message, a))
         # SINK: a script payload stored in a field that later renders raw to staff.
@@ -217,8 +217,7 @@ def cart_remove():
 @bp.route("/about")
 def about():
     return render_template("content.html", title="About SPRKL",
-                           body="SPRKL is a small-batch sparkling water company. "
-                                "This storefront is a deliberately vulnerable demo.")
+                           body="SPRKL is a small-batch sparkling water company. " )
 
 
 @bp.route("/press")

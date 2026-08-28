@@ -1,6 +1,0 @@
-{% extends "base.html" %}
-{% block body %}
-<h2>Connectivity Tester</h2>
-<form method="post"><input name="host" value="{{ host }}" placeholder="host to ping"><button>Run check</button></form>
-{% if output %}<div class="card">{{ output }}</div>{% endif %}
-{% endblock %}
