@@ -7,14 +7,14 @@ from .backends import objstore, cache as _cache
 
 bp = Blueprint("extras", __name__)
 
-PLANTED = config.SPEC.get("planted", {})
+ASSETS = config.SPEC.get("assets", {})
 
 
 @bp.route("/debug")
 def debug():
     return jsonify({"FLASK_SECRET": config.FLASK_SECRET,
                     "JWT_SECRET": config.JWT_SECRET,
-                    "SPRKL_DEBUG_SECRET": PLANTED.get("debug", ""),
+                    "SPRKL_DEBUG_SECRET": ASSETS.get("debug", ""),
                     "DB_PATH": config.DB_PATH})
 
 
@@ -27,7 +27,7 @@ def echo():
         tb = ("Traceback (most recent call last):\n"
               f"  File '{config.BASE_DIR}/app/extras.py', line 1, in echo\n"
               f"ValueError: invalid literal for int(): {n!r}\n"
-              f"CONFIG {PLANTED.get('debug','')}")
+              f"CONFIG {ASSETS.get('debug','')}")
         return Response(tb, status=500, mimetype="text/plain")
 
 
@@ -42,7 +42,7 @@ def status():
         resp = make_response(jsonify({"app": "sprkl", "framework": "SprklKit/1.0.0"}))
     else:
         resp = make_response(render_template("status.html"))
-    resp.headers["X-Powered-By"] = f"SprklKit/1.0.0 ({PLANTED.get('cve','')})"
+    resp.headers["X-Powered-By"] = f"SprklKit/1.0.0 ({ASSETS.get('cve','')})"
     resp.headers["Server"] = "Werkzeug SprklKit/1.0.0"
     return resp
 
@@ -55,13 +55,13 @@ def advisory():
 @bp.route("/.env")
 def dotenv():
     body = (f"FLASK_SECRET={config.FLASK_SECRET}\nJWT_SECRET={config.JWT_SECRET}\n"
-            f"AWS_SECRET={PLANTED.get('env','')}\n")
+            f"AWS_SECRET={ASSETS.get('env','')}\n")
     return Response(body, mimetype="text/plain")
 
 
 @bp.route("/backup.zip")
 def backup_zip():
-    return Response(f"SPRKL source backup — contains {PLANTED.get('env','')}",
+    return Response(f"SPRKL source backup — contains {ASSETS.get('env','')}",
                     mimetype="application/zip")
 
 
@@ -84,7 +84,7 @@ def assets_get(key):
 @bp.route("/api/v2/keycheck")
 def keycheck():
     key = request.args.get("key", "")
-    return {"valid": key == PLANTED.get("jskey", "")}
+    return {"valid": key == ASSETS.get("jskey", "")}
 
 
 @bp.route("/go")

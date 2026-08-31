@@ -88,9 +88,6 @@ def init_schema():
             evidence TEXT, ts REAL,
             UNIQUE(finding_id, actor)
         );
-        CREATE TABLE IF NOT EXISTS canaries (
-            token TEXT PRIMARY KEY, owner TEXT, kind TEXT
-        );
         CREATE TABLE IF NOT EXISTS reviews (
             id INTEGER PRIMARY KEY, product_id INTEGER, author TEXT, body TEXT
         );

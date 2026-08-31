@@ -53,7 +53,7 @@ class Store:
         """Record that this actor authenticated legitimately as `principal`.
 
         Only called on a password-verified login, which is what stops a forged
-        JWT from making the attacker *own* the victim's canaries.
+        JWT from making the attacker *own* the victim's secrets.
         """
         self.db.execute("INSERT OR IGNORE INTO principals VALUES (?,?,?)",
                         (actor, principal, ts))

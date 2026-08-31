@@ -178,7 +178,7 @@ class Record:
         """Canaries the tester sent BACK to the app — proof they already hold a
         secret they were never given (a key lifted from JS, a token from a dump)."""
         text = self._req_text()
-        return [(t, m) for t, m in self.m["canaries"].items()
+        return [(t, m) for t, m in self.m["tokens"].items()
                 if t in text and (kind is None or m["kind"] == kind)]
 
     def leaked(self, kind=None):
@@ -192,7 +192,7 @@ class Record:
             return []
         earned = self.principals
         out = []
-        for tok, meta in self.m["canaries"].items():
+        for tok, meta in self.m["tokens"].items():
             if tok not in text:
                 continue
             if meta["owner"] in earned:

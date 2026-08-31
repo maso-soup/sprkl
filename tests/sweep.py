@@ -39,7 +39,7 @@ def sweep(stack):
     carol = "carol@sprkl-corp.com"
     alice_pw = accounts[alice]["password"]
     carol_pw = accounts[carol]["password"]
-    CP = stack.canary_prefix
+    CP = stack.token_prefix
 
     # ---------- 04 INJECTION ----------
     new().post(f"{B}/retail/login", data={"email": f"{alice}' -- ", "password": "x"})

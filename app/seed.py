@@ -1,8 +1,8 @@
 """Seed the storefront from the run spec the scorer published.
 
-Every planted secret is a value handed to us. This module does not know which
-of them are markers, who owns them, or what leaking one would mean — that map
-lives in the scorer's manifest, so an RCE here cannot enumerate it.
+Every value here is handed to us by the run spec. This module does not know
+which of them matter, who owns them, or what exposing one would mean — that map
+lives in the scorer, so reading this file enumerates nothing.
 """
 import hashlib, os
 from . import config, db
@@ -65,7 +65,7 @@ def seed():
 
     os.makedirs(config.DATA_DIR, exist_ok=True)
     with open(os.path.join(config.DATA_DIR, "flag.txt"), "w") as fh:
-        fh.write(SPEC["planted"]["xxe_file"])
+        fh.write(SPEC["assets"]["xxe_file"])
 
     for name, docs in SPEC["nosql"].items():
         nosql.seed(name, docs)

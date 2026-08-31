@@ -58,7 +58,7 @@ def register():
         elif db.query("SELECT id FROM users WHERE email=?", (email,), one=True):
             error = "An account with that email already exists."
         else:
-            secret = config.CANARY_PREFIX + "USER-" + os.urandom(4).hex()
+            secret = config.TOKEN_PREFIX + "USER-" + os.urandom(4).hex()
             uid = db.execute(
                 "INSERT INTO users (email,password,pw_md5,name,role,loyalty,secret) "
                 "VALUES (?,?,?,?,?,?,?)",
@@ -249,7 +249,7 @@ def _ensure_dirs():
         open(inv, "w").write("SPRKL invoice INV-1001 total $42.00")
     secret = os.path.join(config.DATA_DIR, "server-secret.txt")
     if not os.path.exists(secret):
-        open(secret, "w").write(config.SPEC.get("planted", {}).get("server_file", ""))
+        open(secret, "w").write(config.SPEC.get("assets", {}).get("server_file", ""))
 
 
 @bp.route("/orders/<int:oid>/invoice")

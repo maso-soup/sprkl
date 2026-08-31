@@ -36,7 +36,7 @@ class Harness:
         self.run = run
         self.env = run["spec"]["env"]
         self.manifest_data = run["manifest"]
-        self.canary_prefix = run["manifest"]["canary_prefix"]
+        self.token_prefix = run["manifest"]["token_prefix"]
         self.accounts = run["manifest"]["accounts"]
         self.data_dir = os.path.join(self.tmp, "data")
         import base64 as _b64
@@ -51,8 +51,8 @@ class Harness:
 
         m = run["manifest"]
         manifest = R.manifest(run=m["run"], app={"image": "harness"}, seed=m["run"],
-            canaries=m["canaries"], accounts=m["accounts"], secrets=m["secrets"],
-            internal_cidrs=m["internal_cidrs"], canary_prefix=m["canary_prefix"])
+            tokens=m["tokens"], accounts=m["accounts"], secrets=m["secrets"],
+            internal_cidrs=m["internal_cidrs"], token_prefix=m["token_prefix"])
         self.blobs = R.BlobStore(os.path.join(run_dir, "blobs"))
         self.transcript = ingest.Transcript(os.path.join(run_dir, "transcript.jsonl"))
         self.store = store_mod.Store(os.path.join(run_dir, "solves.db"))

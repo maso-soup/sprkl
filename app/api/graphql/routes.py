@@ -6,11 +6,11 @@ from ...util import actor as session_actor
 
 bp = Blueprint("graphql", __name__)
 
-HIDDEN_CANARY = config.SPEC.get("planted", {}).get("graphql_hidden", "")
+INTERNAL_API_KEY = config.SPEC.get("assets", {}).get("graphql_hidden", "")
 
 SCHEMA = {
     "types": ["Product", "User", "Order",
-              {"name": "InternalConfig", "fields": ["apiKey"], "note": HIDDEN_CANARY}],
+              {"name": "InternalConfig", "fields": ["apiKey"], "note": INTERNAL_API_KEY}],
 }
 
 
