@@ -1,13 +1,11 @@
-"""Admin console — hidden panel (unlinked, unhinted; reached only by browsing to
-/admin). One blueprint serves both the console chrome (GUI pages) and the
-underlying action endpoints, all under /admin/*. These endpoints are the
-unchanged vulnerability sinks.
+"""Admin console — hidden panel, unlinked; reached only by browsing to /admin.
+
+One blueprint serves both the console chrome and the action endpoints.
 """
-import subprocess, os, io, zipfile, base64, pickle
+import subprocess, os, io, zipfile, base64, pickle, pickletools
 from flask import Blueprint, render_template, session, redirect, request
-from ... import db, config
-from ...util import actor, dangerous_pickle
-from ...oracle import engine, collab
+from ... import db, config, tap
+from ...util import actor
 from ...backends import ldap, nosql, fetcher
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -51,10 +49,9 @@ def directory():
     u = request.args.get("u")
     results = None
     if u is not None:
-        # VULN(ldap-injection): filter built by string concatenation.
         flt = "(uid=" + u + ")"
         results = ldap.search(flt)
-        engine.leaked_canary("ldap-injection", actor(), str(results))
+        tap.emit("ldap.search", filter=flt, arg=u, matched=len(results or []))
     return render_template("admin_directory.html", u=u, results=results)
 
 
@@ -106,7 +103,6 @@ def inbox():
     g = _guard()
     if g:
         return g
-    # VULN(blind-xss): stored contact messages rendered raw to staff.
     msgs = db.query("SELECT email,subject,message FROM contacts ORDER BY id DESC")
     return render_template("admin_inbox.html", msgs=msgs)
 
@@ -132,12 +128,14 @@ def signin():
     if not row and user == "admin" and pw == "admin":
         row = db.query("SELECT id,email,role FROM users WHERE role='admin'", one=True)
     if row:
-        # VULN(default-creds-admin): admin/admin works out of the box.
-        if user == "admin" and pw == "admin":
-            engine.solve("default-creds-admin", actor(), {"username": user})
+        tap.emit("auth.result", mechanism="password", ok=True,
+                 password_verified=True, principal=f"user:{row['id']}",
+                 user=user, credential=pw, role=row["role"])
         session["admin"] = row["id"]
         session["admin_role"] = row["role"]
         return redirect("/admin/console")
+    tap.emit("auth.result", mechanism="password", ok=False,
+             password_verified=False, principal=None, user=user)
     return render_template("admin_login.html", error="Invalid admin credentials")
 
 
@@ -148,17 +146,21 @@ def dashboard():
 
 @bp.route("/api/login", methods=["POST"])
 def api_login():
-    """VULN(nosql-login-bypass): JSON login against the Mongo-style admin store;
-    operator objects like {"$ne": null} are honored."""
+    """JSON login against the document-store admin collection."""
     data = request.get_json(silent=True) or {}
     username = data.get("username")
     password = data.get("password")
-    docs = nosql.find("admin_users", {"username": username, "password": password})
+    flt = {"username": username, "password": password}
+    docs = nosql.find("admin_users", flt)
+    tap.emit("nosql.find", collection="admin_users", matched=len(docs),
+             operators=sorted(k for k, v in flt.items() if isinstance(v, dict)))
     if docs:
         d = docs[0]
-        if not isinstance(password, str) or d.get("password") != password:
-            engine.solve("nosql-login-bypass", actor(),
-                         {"username": username, "password": password})
+        tap.emit("auth.result", mechanism="document-store", ok=True,
+                 password_verified=isinstance(password, str)
+                 and d.get("password") == password,
+                 principal=f"admin:{d.get('username')}", user=username,
+                 role=d.get("role"))
         session["admin"] = d.get("username")
         session["admin_role"] = d.get("role")
         return {"ok": True, "role": d.get("role")}
@@ -175,21 +177,15 @@ def ping():
     host = request.values.get("host", "")
     output = ""
     if host:
-        import re as _re
-        a = actor()
-        # VULN(blind-command-injection): host concatenated into a shell command.
         cmd = "ping -c 1 " + host
-        # SINK-side detection: the server runs the shell, so it observes an injected
-        # extra command regardless of where the tester's callback goes.
-        if _re.search(r'(;|\|\||&&|\||\$\(|`)\s*\S', host):
-            engine.solve("blind-command-injection", a, {"host": host, "cmd": cmd})
-        collab.arm_from_payload(host, "blind-command-injection", a)  # bonus /collab path
+        tap.emit("proc.exec", cmd=cmd, shell=True, arg=host,
+                 stdout_returned=False, template="ping -c 1 {}")
         try:
             subprocess.run(cmd, shell=True, timeout=8,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
             pass
-        output = "Connectivity check dispatched."  # blind: no command output shown
+        output = "Connectivity check dispatched."
     return {"output": output}
 
 
@@ -199,24 +195,24 @@ def labels_generate():
     if g:
         return g
     filename = request.values.get("filename", "label")
-    # VULN(os-command-injection): filename concatenated into a shell command.
-    out = subprocess.run("echo LABEL:" + filename, shell=True,
-                         capture_output=True, text=True, timeout=8).stdout
-    marker_lines = [l for l in out.splitlines() if l and not l.startswith("LABEL:")]
-    if any(c in filename for c in [";", "|", "&", "$(", "`"]) and marker_lines:
-        engine.solve("os-command-injection", actor(),
-                     {"filename": filename, "extra_output": marker_lines[:3]})
+    cmd = "echo LABEL:" + filename
+    out = subprocess.run(cmd, shell=True, capture_output=True,
+                         text=True, timeout=8).stdout
+    extra = [l for l in out.splitlines() if l and not l.startswith("LABEL:")]
+    tap.emit("proc.exec", cmd=cmd, shell=True, arg=filename,
+             stdout_returned=True, template="echo LABEL:{}",
+             extra_output_lines=len(extra), extra_output=extra[:3])
     return {"output": out}
 
 
 @bp.route("/tools/mfa-skip")
 def mfa_skip():
-    # VULN(mfa-bypass): the console trusts a pre-MFA session state.
-    a = actor()
     if session.get("pre_mfa") and not session.get("mfa_done"):
         session["admin"] = session.get("pre_mfa")
         session["admin_role"] = "admin"
-        engine.solve("mfa-bypass-skip-step", a, {"skipped": True})
+        tap.emit("auth.result", mechanism="mfa", ok=True, password_verified=False,
+                 principal=f"user:{session.get('pre_mfa')}",
+                 steps_completed=["password"], steps_required=["password", "otp"])
         return {"ok": True, "console": "granted"}
     return {"ok": False}, 403
 
@@ -235,17 +231,16 @@ def inventory_import():
     g = _guard()
     if g:
         return g
-    a = actor()
     xml_data = request.get_data(as_text=True)
     import re as _re
-    # VULN(xxe-xml-import): external entities enabled; SYSTEM file:// entities resolved.
     m = _re.search(r'<!ENTITY\s+\w+\s+SYSTEM\s+"file://([^"]+)"', xml_data)
     if m:
         try:
             content = open(m.group(1)).read()
         except OSError:
             content = ""
-        engine.leaked_canary("xxe-xml-import", a, content)
+        tap.emit("xml.parse", external_entities=True, entity_uri=m.group(1),
+                 resolved=m.group(1), root="/", bytes_read=len(content))
         return {"imported": 0, "entity": content[:200]}
     return {"imported": xml_data.count("<product")}
 
@@ -255,7 +250,6 @@ def import_zip():
     g = _guard()
     if g:
         return g
-    a = actor()
     f = request.files.get("file")
     if not f:
         return {"error": "no file"}, 400
@@ -266,10 +260,9 @@ def import_zip():
     except zipfile.BadZipFile:
         return {"error": "bad zip"}, 400
     for name in z.namelist():
-        # VULN(zip-slip): entry names trusted during extraction.
         real = os.path.realpath(os.path.join(dest, name))
-        if not real.startswith(os.path.realpath(dest)):
-            engine.solve("zip-slip-import", a, {"entry": name, "resolved": real})
+        tap.emit("archive.extract", entry=name, resolved=real,
+                 root=os.path.realpath(dest))
     return {"entries": z.namelist()}
 
 
@@ -278,16 +271,17 @@ def render_theme():
     g = _guard()
     if g:
         return g
-    a = actor()
     theme = request.args.get("theme", "default")
-    # VULN(file-inclusion-rce): theme name builds an include path (traversal).
     base = os.path.join(config.DATA_DIR, "themes")
     os.makedirs(base, exist_ok=True)
     path = os.path.normpath(os.path.join(base, theme + ".html"))
-    if not os.path.realpath(path).startswith(os.path.realpath(base)):
-        engine.solve("file-inclusion-rce", a, {"theme": theme, "resolved": path})
+    real = os.path.realpath(path)
+    root = os.path.realpath(base)
+    tap.emit("tmpl.render", from_path=True, requested=theme,
+             resolved=real, root=root)
+    if not real.startswith(root):
         try:
-            return open(os.path.realpath(path)).read()
+            return open(real).read()
         except OSError:
             return {"included": theme}
     return {"theme": theme}
@@ -298,18 +292,20 @@ def prefs_import():
     g = _guard()
     if g:
         return g
-    a = actor()
     blob = request.values.get("prefs") or request.cookies.get("prefs", "")
     try:
         raw = base64.b64decode(blob)
     except Exception:
         return {"error": "bad blob"}, 400
-    # SINK detection: a pickle carrying a code-exec primitive is RCE on load.
-    if dangerous_pickle(raw):
-        engine.solve("python-pickle-rce", a, {"opcodes": "dangerous-global"})
-    collab.arm_from_payload(raw.decode("latin1", "ignore"), "python-pickle-rce", a)
+    # The opcode list is raw material: what the payload contains, not what it means.
     try:
-        pickle.loads(raw)  # noqa: S301  VULN(python-pickle-rce)
+        ops = [op.name for op, _arg, _pos in pickletools.genops(raw)]
+    except Exception:
+        ops = []
+    tap.emit("deser.load", fmt="pickle", opcodes=",".join(ops[:64]),
+             bytes_len=len(raw))
+    try:
+        pickle.loads(raw)  # noqa: S301
     except Exception:
         pass
     return {"ok": True}
@@ -322,12 +318,7 @@ def webhook_test():
     g = _guard()
     if g:
         return g
-    a = actor()
-    url = request.form.get("url", "")
-    # VULN(ssrf-blind): server issues the request; no body returned.
-    _s, _b, meta = fetcher.fetch(url, finding_ctx=("ssrf-blind-webhook", a))
-    if meta["reached"] in ("internal", "metadata", "collab"):
-        engine.solve("ssrf-blind-webhook", a, {"url": url, "reached": meta["reached"]})
+    fetcher.fetch(request.form.get("url", ""))
     return {"ok": True, "dispatched": True}
 
 
@@ -336,35 +327,22 @@ def fx_sync():
     g = _guard()
     if g:
         return g
-    a = actor()
-    upstream = request.form.get("upstream", "")
-    # VULN(api-unsafe-consumption): trusts and fetches an operator-supplied upstream.
-    _s, _b, meta = fetcher.fetch(upstream, finding_ctx=("api-unsafe-consumption", a))
-    if meta["reached"] in ("internal", "metadata", "collab"):
-        engine.solve("api-unsafe-consumption", a, {"upstream": upstream, "reached": meta["reached"]})
+    fetcher.fetch(request.form.get("upstream", ""))
     return {"ok": True, "synced": True}
 
 
 @bp.route("/reports/financials")
 def reports_financials():
-    # VULN(forced-browsing): unlinked, unauthenticated sensitive report.
-    a = actor()
     rows = db.query("SELECT id,total,secret FROM orders")
-    body = [dict(r) for r in rows]
-    engine.leaked_canary("forced-browsing-reports", a, str(body))
-    return {"report": "financials", "orders": body}
+    return {"report": "financials", "orders": [dict(r) for r in rows]}
 
 
 @bp.route("/public/<path:sub>")
 def public_proxy(sub):
-    # VULN(path-normalization-bypass): the allowlist matches the raw prefix, but an
-    # encoded traversal segment reaches the admin console after normalization.
-    a = actor()
+    """The allowlist matches the raw prefix; normalisation happens afterwards."""
     raw = request.full_path
     if "..%2f" in raw.lower() or "..%2F" in raw or "../" in sub:
         if "admin" in sub or "admin" in raw.lower():
-            engine.leaked_canary("path-normalization-admin", a,
-                                 "SPRKL-CANARY-ADMIN-CONSOLE admin console tokens")
-            engine.solve("path-normalization-admin", a, {"raw": raw})
-            return {"console": "admin", "secret": "SPRKL-CANARY-ADMIN-CONSOLE"}
+            return {"console": "admin",
+                    "secret": config.SPEC.get("planted", {}).get("admin_console", "")}
     return {"public": sub}

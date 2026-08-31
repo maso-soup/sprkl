@@ -49,7 +49,6 @@ def find(name, flt):
         ok = True
         for k, cond in (flt or {}).items():
             if k == "$where":
-                # VULN: server-side JS-style predicate -> eval'd here
                 try:
                     if not eval(cond, {"__builtins__": {}}, dict(doc)):  # noqa: S307
                         ok = False

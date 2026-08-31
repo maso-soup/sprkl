@@ -4,7 +4,6 @@ outbox = []
 
 
 def send(to, subject, body, extra_headers=""):
-    # VULN(smtp-header-injection): raw header block parsed from user fields.
     headers = {"To": to, "Subject": subject}
     raw = f"To: {to}\r\nSubject: {subject}\r\n{extra_headers}"
     for line in raw.split("\r\n"):

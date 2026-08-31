@@ -1,12 +1,11 @@
 """SQLite access layer.
 
-Most helpers are safe/parameterized. A few *intentionally* build SQL by string
-concatenation — those are the sinks for the injection findings and are clearly
-marked with `# VULN`. A per-connection sleep() function is registered so
-time-based blind SQLi has a real primitive (SQLite has no SLEEP()).
+`params=None` runs a statement exactly as given, which is how callers that build
+SQL by concatenation reach the driver. Every statement — parameterised or not —
+goes through the same tap, so the instrumentation is not a tell.
 """
 import os, sqlite3, time, threading
-from . import config
+from . import config, tap
 
 _local = threading.local()
 
@@ -16,7 +15,6 @@ def _connect():
     conn = sqlite3.connect(config.DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    # VULN(sqli-time-based): give SQLite a real time primitive for blind timing.
     conn.create_function("sleep", 1, lambda s: (time.sleep(min(float(s or 0), 5)) or 0))
     return conn
 
@@ -29,21 +27,36 @@ def get_db():
 
 
 def query(sql, params=(), one=False):
-    cur = get_db().execute(sql, params)
-    rows = cur.fetchall()
-    return (rows[0] if rows else None) if one else rows
+    """Run a statement. `params=None` executes it as-is, with no binding."""
+    t0, err, rows = time.perf_counter(), None, []
+    try:
+        rows = get_db().execute(sql, params if params is not None else ()).fetchall()
+        return (rows[0] if rows else None) if one else rows
+    except Exception as e:
+        err = f"{type(e).__name__}: {e}"
+        raise
+    finally:
+        tap.emit("sql.exec", sql=sql, parameterised=params is not None, error=err,
+                 rows=len(rows), ms=round((time.perf_counter() - t0) * 1000, 2))
 
 
 def execute(sql, params=()):
+    t0, err = time.perf_counter(), None
     conn = get_db()
-    cur = conn.execute(sql, params)
-    conn.commit()
-    return cur.lastrowid
+    try:
+        cur = conn.execute(sql, params if params is not None else ())
+        conn.commit()
+        return cur.lastrowid
+    except Exception as e:
+        err = f"{type(e).__name__}: {e}"
+        raise
+    finally:
+        tap.emit("sql.exec", sql=sql, parameterised=params is not None, error=err,
+                 rows=0, ms=round((time.perf_counter() - t0) * 1000, 2))
 
 
 def raw_query(sql):
-    """VULN: execute a fully string-built query (no params). Injection sink."""
-    return get_db().execute(sql).fetchall()
+    return query(sql, None)
 
 
 def init_schema():

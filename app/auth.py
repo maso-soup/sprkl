@@ -1,12 +1,12 @@
-"""Authentication helpers — intentionally broken JWT verification.
+"""Authentication helpers.
 
-The verifier honors the token's own `alg` (accepts `none`), uses a weak HS256
-secret, and resolves `kid` as a file path. Each weakness records which path was
-taken so route handlers can fire the right oracle when it is genuinely abused.
+The verifier honours the token's own `alg`, uses an HS256 secret drawn from a
+wordlist, and resolves `kid` as a file path. Which of those paths a given token
+took is reported on the tap as a plain fact about the verification.
 """
 import os, json, base64, hmac, hashlib
 from flask import request, session
-from . import config, db
+from . import config, db, tap
 from .util import actor as session_actor
 
 STATIC_DIR = os.path.join(config.BASE_DIR, "app", "static")
@@ -41,12 +41,10 @@ def verify_jwt(token):
     alg = (header.get("alg") or "").lower()
     signing_input = f"{h_b64}.{p_b64}"
 
-    # VULN(jwt-alg-none): accept unsigned tokens because the token said so.
     if alg == "none":
         meta["vuln"] = "alg-none"
         return payload, meta
 
-    # VULN(jwt-kid-injection): kid is used as a file path to load the key.
     kid = header.get("kid", "main")
     if kid and kid != "main":
         key = None
@@ -62,7 +60,6 @@ def verify_jwt(token):
                 meta["vuln"] = "kid-injection"
                 return payload, meta
 
-    # VULN(jwt-weak-secret): HS256 with a crackable dictionary secret.
     expect = _b64url(hmac.new(config.JWT_SECRET.encode(), signing_input.encode(), hashlib.sha256).digest())
     if hmac.compare_digest(expect, s_b64):
         meta["vuln"] = "hs256"
@@ -73,15 +70,20 @@ def verify_jwt(token):
 def api_identity():
     """Resolve the API caller: (uid, role, actor_str, jwt_meta).
 
-    Falls back to the session user, then anonymous. jwt_meta carries any abused
-    JWT weakness so the caller can fire the matching oracle.
+    Falls back to the session user, then anonymous. jwt_meta carries which JWT
+    weakness (if any) the presented token exercised; the tap reports it.
     """
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
         claims, meta = verify_jwt(auth[7:])
         if claims:
             uid = claims.get("sub")
-            return uid, claims.get("role", "customer"), f"user:{uid}", meta
+            role = claims.get("role", "customer")
+            tap.emit("auth.result", mechanism="jwt", ok=True,
+                     password_verified=False, principal=f"user:{uid}",
+                     claimed_role=role, stored_role=db_role(uid),
+                     verified_by=meta.get("vuln"))
+            return uid, role, f"user:{uid}", meta
     if session.get("uid"):
         u = db.query("SELECT role FROM users WHERE id=?", (session["uid"],), one=True)
         return session["uid"], (u["role"] if u else "customer"), f"user:{session['uid']}", {"vuln": None}

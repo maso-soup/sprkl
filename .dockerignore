@@ -5,17 +5,13 @@ __pycache__/
 .pytest_cache/
 .git/
 /tmp/
-
-# Answer key and walkthroughs. `COPY . .` would otherwise place these at
-# /app inside the image, where any of the live file-read findings
-# (path-traversal-invoice, file-inclusion-rce, os-command-injection,
-# python-pickle-rce, ...) turns one solve into a walkthrough for the other 94.
-# findings.yaml goes too: the image ships findings.runtime.yaml instead, which
-# tools/strip_catalog.py generates with the answer-key fields removed.
-cheatsheet.html
+# The app image builds from an explicit COPY allowlist (app/, shared/, serve.py),
+# so the answer key never reaches it even by accident. Listed here too as defence
+# in depth for anyone who changes the Dockerfile to `COPY . .`:
 findings.yaml
-CHEATSHEET.md
-README.md
-tools/
+scorer/
 tests/
-.github/
+tools/
+CHEATSHEET.md
+cheatsheet.html
+README.md

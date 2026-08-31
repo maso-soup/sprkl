@@ -1,14 +1,46 @@
-# Single-image SPRKL. `docker compose up --build` then browse http://localhost:8080
+# SPRKL, split for scoring integrity.
+#
+#   tester ──▶ scorer:8080 (ingress proxy) ──▶ app:8081
+#              scorer also owns the tap socket, OAST collector, rules and store.
+#
+# The app is on an INTERNAL network with no route out except through the scorer,
+# and it runs unprivileged. Even full RCE in the app cannot read the ruleset,
+# forge a solve it did not earn, or reach the score API — those live in the other
+# container. The score API (9090) is published on a separate control network so
+# the attacker's box never sees it.
 services:
-  sprkl:
-    build: .
-    image: sprkl:latest
+  scorer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.scorer
+    image: sprkl-scorer:latest
+    networks: [edge, internal]
     ports:
-      - "8080:8080"   # attackable storefront
-      - "9090:9090"   # oracle / scoring API (needs X-Oracle-Key)
-    environment:
-      SPRKL_ORACLE_KEY: sprkl-oracle-dev-key
+      - "8080:8080"              # tester-facing ingress (proxy -> app)
+      - "127.0.0.1:9090:9090"    # score API: host/harness only, never the app net
     volumes:
-      - sprkl-data:/data
+      - run:/run/sprkl  # the one-way tap socket + seed spec (shared with app)
+      - runs:/runs      # transcripts, blobs, solve stores
+    environment:
+      SPRKL_ORACLE_KEY: ${SPRKL_ORACLE_KEY:-}
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    image: sprkl-app:latest
+    networks: [internal]   # internal only: no route to the tester or the internet
+    volumes:
+      - run:/run/sprkl
+      - data:/data
+    depends_on: [scorer]
+
+networks:
+  edge:                    # scorer <-> tester + host-published ports
+  internal:
+    internal: true         # <-- the boundary: app has NO route off this network
+
 volumes:
-  sprkl-data:
+  run:
+  data:
+  runs:
