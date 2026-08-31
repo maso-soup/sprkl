@@ -369,7 +369,7 @@ findings:
     oracle_type: na
     status: na
     hint: "Requires a SAML IdP flow."
-    description: "NA for this single-image build — full SAML/XML-DSig stack is out of scope; documented for completeness."
+    description: "NA — full SAML/XML-DSig stack is out of scope for this build; documented for completeness."
 
 # --------------------------------------------------------------------------
 # 04 — INJECTION
@@ -783,7 +783,7 @@ findings:
     oracle_type: na
     status: na
     hint: "Requires a JVM."
-    description: "NA — Java/PHP/.NET native deserialization needs those runtimes; out of scope for a Python single image."
+    description: "NA — Java/PHP/.NET native deserialization needs those runtimes; out of scope for a Python build."
 
 # --------------------------------------------------------------------------
 # 06 — SSRF & REQUEST LAYER
