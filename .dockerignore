@@ -1,3 +1,4 @@
+# Build cruft neither image needs.
 .venv/
 instance/
 __pycache__/
@@ -5,13 +6,11 @@ __pycache__/
 .pytest_cache/
 .git/
 /tmp/
-# The app image builds from an explicit COPY allowlist (app/, shared/, serve.py),
-# so the answer key never reaches it even by accident. Listed here too as defence
-# in depth for anyone who changes the Dockerfile to `COPY . .`:
-findings.yaml
-scorer/
-tests/
-tools/
-CHEATSHEET.md
-cheatsheet.html
-README.md
+
+# NOTE on the answer key: the app image does NOT rely on this file to stay clean.
+# It builds from an explicit COPY allowlist (app/, shared/, serve.py in
+# docker/Dockerfile.app), so findings.yaml, scorer/ and the rules never enter it
+# regardless of .dockerignore. The scorer image, built from the SAME context,
+# legitimately needs findings.yaml and scorer/, so they must NOT be excluded here.
+# Verify the app image is clean with:
+#   docker run --rm --entrypoint sh sprkl-app:latest -c 'ls; ls findings.yaml scorer 2>&1'
