@@ -90,12 +90,12 @@ def _res_body(data, ctype):
 
 # --- constructors ----------------------------------------------------------
 
-def manifest(run, app, seed, canaries, accounts, secrets,
-             internal_cidrs, canary_prefix):
+def manifest(run, app, seed, tokens, accounts, secrets,
+             internal_cidrs, token_prefix):
     return {"v": V, "t": "manifest", "ts": time.time(), "run": run, "app": app,
-            "seed": seed, "canaries": canaries, "accounts": accounts,
+            "seed": seed, "tokens": tokens, "accounts": accounts,
             "secrets": secrets, "internal_cidrs": internal_cidrs,
-            "canary_prefix": canary_prefix}
+            "token_prefix": token_prefix}
 
 
 def run_marker(phase, note=None):

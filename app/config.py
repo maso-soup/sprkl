@@ -52,7 +52,7 @@ SPEC = (_standalone_spec() if os.environ.get("SPRKL_STANDALONE") == "1"
         else _load_spec(SEED_FILE))
 
 _ENV = SPEC.get("env", {})
-CANARY_PREFIX = SPEC.get("canary_prefix", "SPRKL-LOCAL-")
+TOKEN_PREFIX = SPEC.get("token_prefix", "SPRKL-LOCAL-")
 
 FLASK_SECRET = _ENV["SPRKL_FLASK_SECRET"]
 JWT_SECRET = _ENV["SPRKL_JWT_SECRET"]

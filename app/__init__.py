@@ -82,17 +82,16 @@ def create_app():
         xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset>{items}</urlset>'
         return Response(xml, mimetype="application/xml")
 
-    # The promo key is a per-run planted secret embedded in the storefront JS
-    # (the `secrets-in-js` finding). Serve app.js with the run's value injected so
-    # reading it and submitting it to /api/v2/keycheck actually validates. The file
-    # on disk holds only a placeholder, so the image carries no canary literal.
+    # The promo key is a per-run value embedded in the storefront JS. Serve app.js
+    # with the run's value injected so reading it and submitting it to
+    # /api/v2/keycheck validates; the file on disk holds only a placeholder.
     import pathlib as _pathlib
     _APP_JS = _pathlib.Path(app.static_folder) / "app.js"
 
     @app.route("/static/app.js")
     def _serve_app_js():
         js = _APP_JS.read_text().replace(
-            "__PROMO_KEY__", config.SPEC.get("planted", {}).get("jskey", ""))
+            "__PROMO_KEY__", config.SPEC.get("assets", {}).get("jskey", ""))
         return Response(js, mimetype="application/javascript")
 
     @app.route("/healthz")

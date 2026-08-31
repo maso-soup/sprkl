@@ -81,10 +81,10 @@ async def amain():
 
     manifest_rec = R.manifest(
         run=run["run"], app={"image": os.environ.get("SPRKL_APP_IMAGE", "?")},
-        seed=run["run"], canaries=run["manifest"]["canaries"],
+        seed=run["run"], tokens=run["manifest"]["tokens"],
         accounts=run["manifest"]["accounts"], secrets=run["manifest"]["secrets"],
         internal_cidrs=run["manifest"]["internal_cidrs"],
-        canary_prefix=run["manifest"]["canary_prefix"])
+        token_prefix=run["manifest"]["token_prefix"])
 
     pipeline = ingest.Pipeline(transcript, store, manifest_rec)
     pipeline.feed(manifest_rec)

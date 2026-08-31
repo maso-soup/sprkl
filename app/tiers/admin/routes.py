@@ -344,5 +344,5 @@ def public_proxy(sub):
     if "..%2f" in raw.lower() or "..%2F" in raw or "../" in sub:
         if "admin" in sub or "admin" in raw.lower():
             return {"console": "admin",
-                    "secret": config.SPEC.get("planted", {}).get("admin_console", "")}
+                    "secret": config.SPEC.get("assets", {}).get("admin_console", "")}
     return {"public": sub}

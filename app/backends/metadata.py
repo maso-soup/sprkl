@@ -2,7 +2,7 @@
 from .. import config
 
 CREDS = {
-    "AccessKeyId": "AKIA-SPRKL-" + config.CANARY_PREFIX.strip("-").split("-")[-1],
+    "AccessKeyId": "AKIA-SPRKL-" + config.TOKEN_PREFIX.strip("-").split("-")[-1],
     "SecretAccessKey": config.IAM_SECRET,
     "Token": "sprkl-session-token",
 }
