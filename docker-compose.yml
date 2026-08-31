@@ -22,10 +22,9 @@ services:
       - run:/run/sprkl  # the one-way tap socket + seed spec (shared with app)
       - runs:/runs      # transcripts, blobs, solve stores
     environment:
-      # The score API on 9090 always requires X-Oracle-Key. Set SPRKL_ORACLE_KEY
-      # to pin a key; leave it unset and the scorer mints a random per-run key,
-      # printed in its logs and written to /runs/<run>/oracle-key.txt.
-      SPRKL_ORACLE_KEY: ${SPRKL_ORACLE_KEY:-}
+      # The score API on 9090 always requires this key in an X-Oracle-Key header.
+      # Pinned here for the dev stack; override by exporting SPRKL_ORACLE_KEY.
+      SPRKL_ORACLE_KEY: ${SPRKL_ORACLE_KEY:-sprkl-oracle-key-dev}
 
   app:
     build:
