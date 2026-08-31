@@ -22,7 +22,10 @@ COLLAB_PORT = int(os.environ.get("SPRKL_COLLAB_PORT", "8088"))
 TAP_SOCKET = os.environ.get("SPRKL_TAP_SOCKET", "/run/sprkl/tap.sock")
 SEED_FILE = os.environ.get("SPRKL_SEED_FILE", "/run/sprkl/seed.json")
 RUNS_DIR = os.environ.get("SPRKL_RUNS", "/runs")
-API_KEY = os.environ.get("SPRKL_ORACLE_KEY") or None
+# The score API is always gated. If the operator did not set a key, mint a random
+# per-run one so 9090 is never open — printed below and written to the run dir.
+API_KEY = os.environ.get("SPRKL_ORACLE_KEY") or secrets.token_urlsafe(24)
+API_KEY_GENERATED = not os.environ.get("SPRKL_ORACLE_KEY")
 
 
 def _rid_factory():
@@ -94,6 +97,11 @@ async def amain():
         await collab_server(pipeline, COLLAB_PORT),
     ]
 
+    try:
+        with open(os.path.join(run_dir, "oracle-key.txt"), "w") as fh:
+            fh.write(API_KEY + "\n")
+    except OSError:
+        pass
     flask_app = api.create_api(store, pipeline, API_KEY)
     threading.Thread(
         target=lambda: __import__("waitress").serve(
@@ -103,7 +111,10 @@ async def amain():
     print(f" * run          : {run['run']}")
     print(f" * ingress      : http://{LISTEN_HOST}:{LISTEN_PORT} -> "
           f"{UPSTREAM_HOST}:{UPSTREAM_PORT}")
-    print(f" * score api    : http://{API_HOST}:{API_PORT} (control network)")
+    print(f" * score api    : http://{API_HOST}:{API_PORT}  "
+          f"(X-Oracle-Key required)")
+    print(f" * oracle key   : {API_KEY}"
+          + ("  [generated — set SPRKL_ORACLE_KEY to pin it]" if API_KEY_GENERATED else ""))
     print(f" * transcript   : {transcript.path}", flush=True)
 
     await asyncio.gather(ingest.ticker(pipeline),

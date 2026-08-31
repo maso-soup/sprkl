@@ -5,12 +5,19 @@ from flask import Flask, jsonify, request
 from . import catalog, engine
 
 
-def create_api(store, pipeline, key=None):
+def create_api(store, pipeline, key):
+    """Score API. `key` is required and always enforced: every route except
+    /healthz needs a matching X-Oracle-Key. There is no open-when-unset mode —
+    the caller (scorer.main) guarantees a key, generating one if the operator
+    did not set SPRKL_ORACLE_KEY.
+    """
+    if not key:
+        raise RuntimeError("scorer API requires a non-empty key")
     app = Flask("sprkl_scorer")
 
     @app.before_request
     def _gate():
-        if request.path == "/healthz" or not key:
+        if request.path == "/healthz":
             return None
         if request.headers.get("X-Oracle-Key") != key:
             return jsonify({"error": "missing or invalid X-Oracle-Key"}), 401
