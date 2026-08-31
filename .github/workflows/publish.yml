@@ -1,9 +1,10 @@
-# Build the SPRKL image and publish it to GHCR.
-#   - push to main            -> ghcr.io/maso-soup/sprkl:latest + :sha-<short>
-#   - push a tag  vX.Y.Z      -> ghcr.io/maso-soup/sprkl:vX.Y.Z + :sha-<short>  (pin these in benchmarks)
-#   - pull request            -> build + smoke-test only (no publish)
-# The image is only pushed AFTER it boots and its oracle records a real solve.
-name: publish-image
+# Build the two SPRKL images and publish them to GHCR.
+#   - push to main        -> ghcr.io/maso-soup/sprkl-{app,scorer}:latest + :sha-<short>
+#   - push a tag vX.Y.Z    -> ...:vX.Y.Z + :sha-<short>   (pin these in benchmarks)
+#   - pull request         -> build + smoke-test only (no publish)
+# Images are only pushed AFTER the stack boots, scores a real exploit through the
+# ingress proxy, and the app image is proven to carry no answer key.
+name: publish-images
 
 on:
   push:
@@ -14,7 +15,8 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE: ghcr.io/maso-soup/sprkl
+  APP_IMAGE: ghcr.io/maso-soup/sprkl-app
+  SCORER_IMAGE: ghcr.io/maso-soup/sprkl-scorer
 
 jobs:
   build-test-publish:
@@ -24,58 +26,72 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
-      # The image must never contain the answer key, so the generated runtime
-      # catalog has to be current before we build from it.
-      - name: Verify findings.runtime.yaml is current
-        run: |
-          pip install -q pyyaml
-          python tools/strip_catalog.py --check
-
       - uses: docker/setup-qemu-action@v3        # emulation for arm64
       - uses: docker/setup-buildx-action@v3
 
-      # ---- 1) build a single-arch image locally and SMOKE TEST it ----
-      - name: Build (amd64) for smoke test
+      # ---- 1) build both images locally and SMOKE TEST the stack ----
+      - name: Build app image (amd64) for smoke test
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/Dockerfile.app
           load: true
-          tags: sprkl:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: sprkl-app:latest
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
 
-      - name: Smoke test (boot + oracle end-to-end)
+      - name: Build scorer image (amd64) for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.scorer
+          load: true
+          tags: sprkl-scorer:latest
+          cache-from: type=gha,scope=scorer
+          cache-to: type=gha,mode=max,scope=scorer
+
+      - name: Smoke test (stack boots, proxy scores a real exploit)
+        env:
+          SPRKL_ORACLE_KEY: ci-smoke-key
         run: |
           set -euo pipefail
-          docker run -d --name sprkl -p 8080:8080 -p 9090:9090 \
-            -e SPRKL_ORACLE_KEY=ci-smoke-key sprkl:ci
-          # wait for the app to come up
+          docker compose up -d --no-build
+          KEY='X-Oracle-Key: ci-smoke-key'
+
+          echo "== storefront reachable through the proxy on 8080 =="
           for i in $(seq 1 30); do
-            if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then break; fi
+            if curl -fsS http://localhost:8080/ >/dev/null 2>&1; then break; fi
             sleep 2
           done
-          echo "== storefront renders =="
           curl -fsS http://localhost:8080/ >/dev/null
-          echo "== oracle is gated (expect 401 without key) =="
+
+          echo "== score API on 9090 is gated (401 without key, 200 with) =="
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9090/oracle/score)" = "401"
-          echo "== catalog has the expected live findings =="
-          curl -fsS -H 'X-Oracle-Key: ci-smoke-key' http://localhost:9090/oracle/score \
+          curl -fsS -H "$KEY" http://localhost:9090/oracle/score \
             | grep -qE '"total_live":[[:space:]]*95'
-          echo "== end-to-end: a GUI action records a solve =="
+
+          echo "== end-to-end: an exploit through the proxy records a solve =="
           curl -fsS "http://localhost:8080/search?q=lime%27" >/dev/null
-          curl -fsS -H 'X-Oracle-Key: ci-smoke-key' http://localhost:9090/oracle/solves \
-            | grep -q 'sqli-error-search'
-          echo "== no answer key inside the image =="
-          for f in cheatsheet.html CHEATSHEET.md README.md findings.yaml tools tests; do
-            if docker exec sprkl test -e "/app/$f"; then
-              echo "FAIL: /app/$f is in the image — a file-read finding could leak it"
+          for i in $(seq 1 10); do
+            if curl -fsS -H "$KEY" http://localhost:9090/oracle/solves | grep -q 'sqli-error-search'; then
+              break; fi
+            sleep 1
+          done
+          curl -fsS -H "$KEY" http://localhost:9090/oracle/solves | grep -q 'sqli-error-search'
+
+          echo "== the APP image carries no answer key =="
+          for f in findings.yaml scorer CHEATSHEET.md cheatsheet.html README.md tools tests; do
+            if docker run --rm --entrypoint sh sprkl-app:latest -c "test -e /app/$f"; then
+              echo "FAIL: /app/$f is in the app image — a file-read finding could leak it"
               exit 1
             fi
           done
-          test -z "$(docker exec sprkl grep -rl 'oracle_type' /app 2>/dev/null)"
+
+          echo "== the SCORER image DOES hold the rules + catalog (and nothing published them to the app) =="
+          docker run --rm --entrypoint sh sprkl-scorer:latest -c 'test -e /srv/findings.yaml && test -e /srv/scorer/rules.py'
+
           echo "smoke test passed"
-          docker rm -f sprkl >/dev/null
+          docker compose down -v
 
       # ---- 2) only past this point do we authenticate + publish ----
       - name: Log in to GHCR
@@ -86,25 +102,50 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute tags & labels
+      - name: Tags & labels (app)
         if: github.event_name != 'pull_request'
-        id: meta
+        id: meta_app
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE }}
+          images: ${{ env.APP_IMAGE }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
             type=sha,prefix=sha-,format=short
 
-      - name: Build (multi-arch) & push
+      - name: Tags & labels (scorer)
+        if: github.event_name != 'pull_request'
+        id: meta_scorer
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.SCORER_IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=sha,prefix=sha-,format=short
+
+      - name: Build (multi-arch) & push app
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/Dockerfile.app
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_app.outputs.tags }}
+          labels: ${{ steps.meta_app.outputs.labels }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+
+      - name: Build (multi-arch) & push scorer
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.scorer
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_scorer.outputs.tags }}
+          labels: ${{ steps.meta_scorer.outputs.labels }}
+          cache-from: type=gha,scope=scorer
+          cache-to: type=gha,mode=max,scope=scorer

@@ -20,7 +20,7 @@ code{background:#f0f4f8;padding:1px 4px;border-radius:4px;font-size:12px}
 .controls{margin:10px 0}.controls input{padding:7px;border-radius:6px;border:1px solid var(--line);width:260px}
 </style></head><body>
 <header><b>SPRKL</b> &nbsp;Vulnerability Cheat Sheet</header>
-<div class=warn>⚠ Intentionally vulnerable. Authorized testing only. Findings are oracle-scored server-side; poll <code>/oracle/solves</code>.</div>
+<div class=warn>⚠ Intentionally vulnerable. Authorized testing only. Findings are judged by a separate scorer container; read ground truth on the gated API <code>localhost:9090/oracle/score</code> (<code>X-Oracle-Key</code>). Rules, catalog and key live in the scorer, not the app.</div>
 <div class=wrap>
 <p><b>95</b> live findings + 5 documented-N/A, across 11 families.</p>
 <div class=chips><span class="chip d1">L1: 5</span> <span class="chip d2">L2: 15</span> <span class="chip d3">L3: 25</span> <span class="chip d4">L4: 26</span> <span class="chip d5">L5: 20</span> <span class="chip d6">L6: 4</span></div>

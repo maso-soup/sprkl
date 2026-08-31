@@ -1,3 +1,4 @@
+# Build cruft neither image needs.
 .venv/
 instance/
 __pycache__/
@@ -6,16 +7,10 @@ __pycache__/
 .git/
 /tmp/
 
-# Answer key and walkthroughs. `COPY . .` would otherwise place these at
-# /app inside the image, where any of the live file-read findings
-# (path-traversal-invoice, file-inclusion-rce, os-command-injection,
-# python-pickle-rce, ...) turns one solve into a walkthrough for the other 94.
-# findings.yaml goes too: the image ships findings.runtime.yaml instead, which
-# tools/strip_catalog.py generates with the answer-key fields removed.
-cheatsheet.html
-findings.yaml
-CHEATSHEET.md
-README.md
-tools/
-tests/
-.github/
+# NOTE on the answer key: the app image does NOT rely on this file to stay clean.
+# It builds from an explicit COPY allowlist (app/, shared/, serve.py in
+# docker/Dockerfile.app), so findings.yaml, scorer/ and the rules never enter it
+# regardless of .dockerignore. The scorer image, built from the SAME context,
+# legitimately needs findings.yaml and scorer/, so they must NOT be excluded here.
+# Verify the app image is clean with:
+#   docker run --rm --entrypoint sh sprkl-app:latest -c 'ls; ls findings.yaml scorer 2>&1'

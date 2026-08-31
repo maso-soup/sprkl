@@ -1,0 +1,28 @@
+# The scorer: ingress proxy the tester talks to, tap intake, OAST collector,
+# transcript, rules, solve store, and score API. This is where the answer key
+# lives (findings.yaml + scorer/rules.py). The tester has no route here.
+FROM python:3.13-slim
+
+WORKDIR /srv
+COPY docker/requirements.scorer.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY scorer/ ./scorer/
+COPY shared/ ./shared/
+COPY findings.yaml .
+
+RUN mkdir -p /run/sprkl /runs
+ENV SPRKL_LISTEN_PORT=8080 \
+    SPRKL_UPSTREAM_HOST=app \
+    SPRKL_UPSTREAM_PORT=8081 \
+    SPRKL_API_PORT=9090 \
+    SPRKL_COLLAB_PORT=8088 \
+    SPRKL_TAP_SOCKET=/run/sprkl/tap.sock \
+    SPRKL_SEED_FILE=/run/sprkl/seed.json \
+    SPRKL_RUNS=/runs \
+    SPRKL_CATALOG=/srv/findings.yaml \
+    PYTHONPATH=/srv
+# 8080 = tester-facing ingress. 9090 = score API, published only on the control
+# network in compose so the tester's box cannot reach it.
+EXPOSE 8080 9090 8088
+CMD ["python", "-m", "scorer.main"]

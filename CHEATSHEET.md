@@ -2,7 +2,14 @@
 
 > **Generated from `findings.yaml` — do not edit by hand.** Run `python tools/gen_cheatsheet.py`.
 
-SPRKL is a deliberately vulnerable sparkling-water storefront. Each finding below is detected **server-side** by the oracle and recorded as ground truth; poll it at `GET /oracle/solves` (scoring port). Testers cannot self-report.
+SPRKL is a deliberately vulnerable sparkling-water storefront. Each finding below is judged by the **scorer** — a separate container that fronts the app as an ingress proxy, observes your traffic, and correlates it with the neutral events the app reports. It records ground truth you cannot self-report; read it on the **gated scoring API** (port `9090`, `X-Oracle-Key` required):
+
+```
+curl -s -H 'X-Oracle-Key: <key>' localhost:9090/oracle/score   # blackbox vs post-capability
+curl -s -H 'X-Oracle-Key: <key>' localhost:9090/oracle/solves  # ground-truth solve events
+```
+
+Neither the rules nor this catalog nor the scoring key live in the attackable app, so a file-read or RCE yields source with a bug in it, not an answer key.
 
 Every finding has a **GUI entry point** (the *GUI* column) — the on-page control a tester reaches by browsing. The admin surface is a **hidden panel at `/admin`** (default creds `admin/admin`), not linked from anywhere; find it by forced browsing.
 
@@ -15,7 +22,11 @@ Every finding has a **GUI entry point** (the *GUI* column) — the on-page contr
 
 **Difficulty legend:** ① trivial · ② easy · ③ moderate · ④ intermediate · ⑤ hard · ⑥ expert
 
-**Oracle types:** `sink-predicate` (fires at the vulnerable sink when truly exploited — including blind findings, detected server-side at the point of execution/storage, so a tester using their own tooling is credited) · `state-diff` (server invariant violated) · `canary` (planted secret leaves through the vuln to an unauthorized actor). An internal OAST collector at `/collab/<token>` also credits blind findings as a bonus path, but no finding requires it.
+**Detection (the *Oracle* column).** Each finding is credited by one scorer rule over what the scorer saw: `sink-predicate` — the app's neutral tap for a sink (a statement that ran unparameterised, a path that escaped its root, a template expression that evaluated) meets the rule's condition; `state-diff` — a reported invariant is violated (coupon reused, negative total, payment skipped); `canary` — a planted `SPRKL-<run>-*` secret appears in a response to an actor who does not own it. Blind egress (command injection, SSRF) also lands at the scorer's OAST collector, but no finding requires it.
+
+**Evidence class.** A rule that reads only proxy-observed traffic is *proxy-observed* and cannot be faked even by a fully compromised app; one that relies on an app tap is *app-reported* and forgeable only after RCE — and even then the tap must attach to a request the proxy actually saw. The score API reports blackbox vs post-capability solves accordingly.
+
+> Secrets are randomised per run (the `SPRKL-<run>-*` canary prefix, the JWT secret, the MAC key, the PRNG seed), so ids and locations below are stable but the values you extract change every run.
 
 ## 02-access-control — Access Control
 
@@ -174,13 +185,13 @@ Every finding has a **GUI entry point** (the *GUI* column) — the on-page contr
 
 ## Documented as N/A for this build
 
-These Ptolemy exploit types are impractical in a Python single-image app; they are catalogued for coverage completeness but **not** oracle-scored.
+These Ptolemy exploit types are impractical in a Python build; they are catalogued for coverage completeness but **not** scored.
 
 | ID | Family | Reason |
 |----|--------|--------|
-| `saml-signature-bypass` | 03-auth-session | NA for this single-image build — full SAML/XML-DSig stack is out of scope; documented for completeness. |
+| `saml-signature-bypass` | 03-auth-session | NA — full SAML/XML-DSig stack is out of scope for this build; documented for completeness. |
 | `oob-sqli` | 04-injection | NA — OOB exfiltration needs a DB that can call out (MSSQL/Oracle/PG); SQLite cannot. Documented. |
-| `java-deserialization` | 05-deserialization | NA — Java/PHP/.NET native deserialization needs those runtimes; out of scope for a Python single image. |
+| `java-deserialization` | 05-deserialization | NA — Java/PHP/.NET native deserialization needs those runtimes; out of scope for a Python build. |
 | `http-request-smuggling` | 06-ssrf-request-layer | NA — smuggling requires a specific proxy chain; not reproducible in a single WSGI process. Documented. |
 | `weak-tls-config` | 10-crypto-data | NA — TLS is out of the app's scope in a single HTTP container. Documented. |
 

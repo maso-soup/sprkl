@@ -3,7 +3,6 @@
 <div class="hero"><h1>You've been invited to SPRKL 🎉</h1><p>Your friend sent you a welcome perk.</p></div>
 <div class="card">Referral: <span id="ref">loading…</span></div>
 <script>
-// VULN(csti): the ref param is evaluated by this tiny client template engine.
 var raw = {{ ref|tojson }};
 var re = new RegExp("\\{\\{(.+?)\\}\\}");
 var m = raw.match(re);

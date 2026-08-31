@@ -1,15 +1,20 @@
-"""SPRKL app factory. Builds the attackable storefront (main app) and mounts the
-internal OAST collab collector. The scoring API is a SEPARATE app (oracle/api.py)."""
+"""SPRKL app factory.
+
+This process contains no scoring logic, no findings catalog, no scoring key and
+no solve store. It reports what it did over a one-way tap and is told nothing
+about what any of it means.
+"""
 from datetime import timedelta
 from flask import Flask, request, session, jsonify, redirect, url_for, Response
-from . import config, db, seed
-from .oracle import collab
+from . import config, db, seed, tap
 
 
 def create_app():
     app = Flask(__name__, template_folder="templates", static_folder="static")
-    app.secret_key = config.FLASK_SECRET  # VULN: guessable session secret
+    app.secret_key = config.FLASK_SECRET
     app.permanent_session_lifetime = timedelta(days=7)
+
+    tap.install(app)
 
     with app.app_context():
         seed.seed()
@@ -76,13 +81,6 @@ def create_app():
         items = "".join(f"<url><loc>{u}</loc></url>" for u in urls)
         xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset>{items}</urlset>'
         return Response(xml, mimetype="application/xml")
-
-    # Internal OAST collector (bonus path; no finding requires it).
-    @app.route("/collab/<path:token>", methods=["GET", "POST"])
-    def collab_hit(token):
-        fid = collab.hit(token, {"ip": request.remote_addr,
-                                 "ua": request.headers.get("User-Agent", "")})
-        return jsonify({"collab": "ok", "matched": bool(fid)})
 
     @app.route("/healthz")
     def healthz():

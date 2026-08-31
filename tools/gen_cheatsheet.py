@@ -45,8 +45,16 @@ def render(findings):
     w("> **Generated from `findings.yaml` — do not edit by hand.** "
       "Run `python tools/gen_cheatsheet.py`.\n\n")
     w("SPRKL is a deliberately vulnerable sparkling-water storefront. Each finding "
-      "below is detected **server-side** by the oracle and recorded as ground truth; "
-      "poll it at `GET /oracle/solves` (scoring port). Testers cannot self-report.\n\n")
+      "below is judged by the **scorer** — a separate container that fronts the app "
+      "as an ingress proxy, observes your traffic, and correlates it with the neutral "
+      "events the app reports. It records ground truth you cannot self-report; read it "
+      "on the **gated scoring API** (port `9090`, `X-Oracle-Key` required):\n\n")
+    w("```\n"
+      "curl -s -H 'X-Oracle-Key: <key>' localhost:9090/oracle/score   # blackbox vs post-capability\n"
+      "curl -s -H 'X-Oracle-Key: <key>' localhost:9090/oracle/solves  # ground-truth solve events\n"
+      "```\n\n")
+    w("Neither the rules nor this catalog nor the scoring key live in the attackable "
+      "app, so a file-read or RCE yields source with a bug in it, not an answer key.\n\n")
     w("Every finding has a **GUI entry point** (the *GUI* column) — the on-page control "
       "a tester reaches by browsing. The admin surface is a **hidden panel at `/admin`** "
       "(default creds `admin/admin`), not linked from anywhere; find it by forced browsing.\n\n")
@@ -68,13 +76,22 @@ def render(findings):
 
     w("**Difficulty legend:** ① trivial · ② easy · ③ moderate · ④ intermediate · "
       "⑤ hard · ⑥ expert\n\n")
-    w("**Oracle types:** `sink-predicate` (fires at the vulnerable sink when truly "
-      "exploited — including blind findings, detected server-side at the point of "
-      "execution/storage, so a tester using their own tooling is credited) · "
-      "`state-diff` (server invariant violated) · `canary` (planted secret leaves "
-      "through the vuln to an unauthorized actor). An internal OAST collector at "
-      "`/collab/<token>` also credits blind findings as a bonus path, but no finding "
-      "requires it.\n\n")
+    w("**Detection (the *Oracle* column).** Each finding is credited by one scorer "
+      "rule over what the scorer saw: `sink-predicate` — the app's neutral tap for a "
+      "sink (a statement that ran unparameterised, a path that escaped its root, a "
+      "template expression that evaluated) meets the rule's condition; `state-diff` — "
+      "a reported invariant is violated (coupon reused, negative total, payment "
+      "skipped); `canary` — a planted `SPRKL-<run>-*` secret appears in a response to "
+      "an actor who does not own it. Blind egress (command injection, SSRF) also lands "
+      "at the scorer's OAST collector, but no finding requires it.\n\n")
+    w("**Evidence class.** A rule that reads only proxy-observed traffic is "
+      "*proxy-observed* and cannot be faked even by a fully compromised app; one that "
+      "relies on an app tap is *app-reported* and forgeable only after RCE — and even "
+      "then the tap must attach to a request the proxy actually saw. The score API "
+      "reports blackbox vs post-capability solves accordingly.\n\n")
+    w("> Secrets are randomised per run (the `SPRKL-<run>-*` canary prefix, the JWT "
+      "secret, the MAC key, the PRNG seed), so ids and locations below are stable but "
+      "the values you extract change every run.\n\n")
 
     # ---- per-family detail ----
     for fam in sorted(byfam):
@@ -96,8 +113,8 @@ def render(findings):
     # ---- N/A appendix ----
     if na:
         w("## Documented as N/A for this build\n\n")
-        w("These Ptolemy exploit types are impractical in a Python single-image app; "
-          "they are catalogued for coverage completeness but **not** oracle-scored.\n\n")
+        w("These Ptolemy exploit types are impractical in a Python build; they are "
+          "catalogued for coverage completeness but **not** scored.\n\n")
         w("| ID | Family | Reason |\n|----|--------|--------|\n")
         for f in na:
             w(f"| `{f['id']}` | {f['family']} | {esc(f['description'])} |\n")
@@ -160,7 +177,7 @@ code{{background:#f0f4f8;padding:1px 4px;border-radius:4px;font-size:12px}}
 .controls{{margin:10px 0}}.controls input{{padding:7px;border-radius:6px;border:1px solid var(--line);width:260px}}
 </style></head><body>
 <header><b>SPRKL</b> &nbsp;Vulnerability Cheat Sheet</header>
-<div class=warn>⚠ Intentionally vulnerable. Authorized testing only. Findings are oracle-scored server-side; poll <code>/oracle/solves</code>.</div>
+<div class=warn>⚠ Intentionally vulnerable. Authorized testing only. Findings are judged by a separate scorer container; read ground truth on the gated API <code>localhost:9090/oracle/score</code> (<code>X-Oracle-Key</code>). Rules, catalog and key live in the scorer, not the app.</div>
 <div class=wrap>
 <p><b>{len(live)}</b> live findings + {len(na)} documented-N/A, across 11 families.</p>
 <div class=chips>{chips}</div>

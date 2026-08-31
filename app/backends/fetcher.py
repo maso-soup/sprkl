@@ -1,23 +1,22 @@
-"""Server-side URL fetcher — the SSRF sink.
+"""Server-side URL fetcher.
 
-Detection is SINK-side: the server classifies the *target* it was asked to reach,
-so SSRF is credited regardless of where a tester's own collaborator lives. Targets:
-  - 169.254.169.254            -> cloud metadata (canary IAM creds)
-  - loopback / private / *.internal / app-origin -> INTERNAL (SSRF proof)
-  - our collab base            -> OAST callback (bonus path)
-  - anything else (public)     -> a REAL outbound GET is attempted, so a tester can
-                                  point the feature at their own listener and watch
-                                  the request arrive (private ranges also really egress).
-A naive literal blocklist (localhost/127.0.0.1) is applied first, so filter-bypass
-variants (decimal IP, 0.0.0.0, [::], *.internal) slip past it into INTERNAL.
+The blocklist matches literal strings only, so it is applied before any name
+resolution. Every call is reported on the tap with the host as written and the
+address it actually resolved to; whether that address is somewhere the fetcher
+should have gone is the scorer's judgement, made against the run manifest.
 """
-import ipaddress, re
+import ipaddress, re, socket
 from urllib.parse import urlparse
-from .. import config
-from ..oracle import collab
+from .. import config, tap
 
-# VULN: blocklist matches literal strings only.
 _BLOCK = ["localhost", "127.0.0.1"]
+
+
+def _resolve(host):
+    try:
+        return socket.gethostbyname(host.strip("[]"))
+    except OSError:
+        return None
 
 
 def _is_metadata(host):
@@ -39,27 +38,20 @@ def _is_internal(host):
 
 
 def fetch(url, finding_ctx=None):
-    """Fetch `url`. Returns (status, body, meta). meta['reached'] in
-    {collab, metadata, internal, blocked, external}."""
+    """Fetch `url`. Returns (status, body, meta)."""
     meta = {"reached": None, "blocked": False}
     try:
         p = urlparse(url if "://" in url else "http://" + url)
     except Exception:
         return 0, "", meta
     host = (p.hostname or "").lower()
+    resolved = host if _looks_ip(host) else _resolve(host)
+    blocked = any(b == host for b in _BLOCK)
+    tap.emit("net.fetch", url=url, host=host, scheme=p.scheme,
+             resolved_ip=resolved, blocked_by_filter=blocked,
+             path=p.path or "/")
 
-    # collab callback (OAST) — bonus proof path
-    collab_host = urlparse(config.COLLAB_BASE).hostname
-    if host == collab_host and "/collab/" in url:
-        m = re.search(r"/collab/([A-Za-z0-9_\-\.]+)", url)
-        if m and finding_ctx:
-            collab.arm(m.group(1), finding_ctx[0], finding_ctx[1])
-            collab.hit(m.group(1), {"via": "ssrf"})
-        meta["reached"] = "collab"
-        return 200, "ok", meta
-
-    # naive literal blocklist (this is the filter that filter-bypass evades)
-    if any(b == host for b in _BLOCK):
+    if blocked:
         meta["blocked"] = True
         meta["reached"] = "blocked"
         return 403, "blocked", meta
@@ -78,6 +70,14 @@ def fetch(url, finding_ctx=None):
     body = _real_get(url)
     meta["reached"] = "external"
     return 200, body or f"fetched {host}", meta
+
+
+def _looks_ip(host):
+    try:
+        ipaddress.ip_address((host or "").strip("[]"))
+        return True
+    except ValueError:
+        return False
 
 
 def _real_get(url):

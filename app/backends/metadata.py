@@ -1,8 +1,10 @@
-"""Fake cloud metadata service (169.254.169.254). Returns canary IAM creds."""
+"""Fake cloud metadata service (169.254.169.254)."""
+from .. import config
+
 CREDS = {
-    "AccessKeyId": "AKIA-SPRKL-CANARY",
-    "SecretAccessKey": "SPRKL-CANARY-IAM-SECRET",
-    "Token": "sprkl-canary-session-token",
+    "AccessKeyId": "AKIA-SPRKL-" + config.CANARY_PREFIX.strip("-").split("-")[-1],
+    "SecretAccessKey": config.IAM_SECRET,
+    "Token": "sprkl-session-token",
 }
 
 
