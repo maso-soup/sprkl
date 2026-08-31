@@ -188,3 +188,11 @@ gate for this one surface.
 
 > `tools/strip_catalog.py` / `findings.runtime.yaml` are **obsolete** under the split:
 > the app ships no catalog at all, so there is nothing to strip.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). See [`NOTICE`](NOTICE).
+Copyright 2026 Mason Jones.
+
+SPRKL is intentionally vulnerable and is for authorized security training and
+benchmarking only — do not deploy it to the public internet.
