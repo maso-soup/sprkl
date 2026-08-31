@@ -63,8 +63,10 @@ def _(r):
 
 @rule("xpath-injection", prereq=["/products"])
 def _(r):
+    # The field selector reaches a node it was never meant to (the planted
+    # <internal> secret). A canary out of the spec endpoint is the injection.
     return bool(r.leaked()) and r.any(
-        "xpath.eval", lambda e: e.field and re.search(r"[\[\]|*@/]|\bor\b", e.field, re.I))
+        "xpath.eval", lambda e: e.field and e.field != "flavor")
 
 
 @rule("smtp-header-injection", prereq=["/contact"])
@@ -75,16 +77,10 @@ def _(r):
 
 @rule("crlf-header-injection", prereq=["/go/track"])
 def _(r):
-    # Proxy-observed: an injected header actually appears in the response the
-    # tester received. No app cooperation, and no way to fake it.
-    injected = {"x-sprkl-next"}
-    base = {k for k in r.res_headers}
-    for v in r.args.values():
-        if v and re.search(r"[\r\n]|%0d|%0a", v, re.I) and ":" in v:
-            candidate = v.split(":")[0].split("\n")[-1].split("\r")[-1].strip().lower()
-            if candidate and candidate in base - injected:
-                return True
-    return False
+    # Werkzeug strips a real header split, so the proof is the app copying a
+    # CRLF-bearing value into a header sink (app-reported) — matching intent.
+    return r.any("obj.assign", lambda e: e.target == "response.header"
+                 and re.search(r"[\r\n]", e.value or ""))
 
 
 # ===========================================================================
@@ -98,8 +94,10 @@ def _(r):
 
 @rule("dom-xss-search", prereq=["/search"])
 def _(r):
+    # DOM-based: the page reads `hl` from the URL into innerHTML client-side, so
+    # the payload is in the query (proxy-visible) and the sink is in the body.
     hl = r.args.get("hl")
-    return bool(hl and XSS.search(hl) and hl in r.body)
+    return bool(hl and XSS.search(hl)) and "innerHTML" in (r.body or "")
 
 
 @rule("stored-xss-review", prereq=["/product/"])
@@ -389,8 +387,11 @@ def _(r):
 
 @rule("weak-session-token")
 def _(r):
+    # A forgeable remember-cookie authenticated the actor as a principal they
+    # never logged in as. No canary needed: acting as the victim is the finding.
     return r.any("auth.result", lambda e: e.mechanism == "remember-cookie"
-                 and e.ok and e.token_signed is False) and bool(r.leaked(kind="user-secret"))
+                 and e.ok and e.token_signed is False
+                 and e.principal and e.principal not in r.principals)
 
 
 @rule("password-reset-predictable-token")
@@ -502,7 +503,7 @@ def _(r):
 
 @rule("ssrf-basic", prereq=["/retail/account/avatar-from-url"])
 def _(r):
-    return r.any("net.fetch", lambda e: r.is_internal(e.resolved_ip)
+    return r.any("net.fetch", lambda e: r._internal_target(e)
                  and not e.blocked_by_filter)
 
 
@@ -515,20 +516,18 @@ def _(r):
 @rule("ssrf-filter-bypass")
 def _(r):
     # Reached internal space through a host the literal blocklist did not catch.
-    return r.any("net.fetch", lambda e: r.is_internal(e.resolved_ip)
+    return r.any("net.fetch", lambda e: r._internal_target(e)
                  and not e.blocked_by_filter and e.host not in ("127.0.0.1", "localhost"))
 
 
 @rule("ssrf-blind-webhook", prereq=["/admin/integrations"])
 def _(r):
-    return "/webhook" in r.path and r.any(
-        "net.fetch", lambda e: r.is_internal(e.resolved_ip))
+    return "/webhook" in r.path and r.any("net.fetch", lambda e: r._internal_target(e))
 
 
 @rule("api-unsafe-consumption", prereq=["/admin/integrations"])
 def _(r):
-    return "/fx-sync" in r.path and r.any(
-        "net.fetch", lambda e: r.is_internal(e.resolved_ip) or e.resolved_ip == "169.254.169.254")
+    return "/fx-sync" in r.path and r.any("net.fetch", lambda e: r._internal_target(e))
 
 
 # ===========================================================================

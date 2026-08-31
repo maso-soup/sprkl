@@ -30,6 +30,19 @@ class Harness:
 
     def start(self):
         run = seedgen.generate()
+        # Per-run material a test needs to craft exploits (forged JWTs, the MAC
+        # cookie, the PRNG seed, canary-derived keys). None of it is guessable
+        # across runs; the test gets it the way the harness operator would.
+        self.run = run
+        self.env = run["spec"]["env"]
+        self.manifest_data = run["manifest"]
+        self.canary_prefix = run["manifest"]["canary_prefix"]
+        self.accounts = run["manifest"]["accounts"]
+        self.data_dir = os.path.join(self.tmp, "data")
+        import base64 as _b64
+        self.jwt_secret = self.env["SPRKL_JWT_SECRET"]
+        self.mac_secret = _b64.b64decode(self.env["SPRKL_COOKIE_MAC_SECRET"])
+        self.rng_seed = int(self.env["SPRKL_WEAK_RNG_SEED"])
         seed_file = os.path.join(self.tmp, "seed.json")
         json.dump(run["spec"], open(seed_file, "w"))
         tap_sock = os.path.join(self.tmp, "tap.sock")

@@ -8,7 +8,6 @@
   <pre class="result"></pre>
 </div>
 <script>
-// VULN(csp-bypass): the msg param is reflected into this inline script under a weak CSP.
 var msg = "{{ msg|safe }}";
 if (msg) document.getElementById('p').innerHTML = msg;
 // promo validator uses the embedded key (secrets-in-js)

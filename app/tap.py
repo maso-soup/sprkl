@@ -66,8 +66,12 @@ def _cap(v):
     return v
 
 
-def emit(kind, **d):
-    """Record one sink event against the current request."""
+def emit(_kind, /, **d):
+    """Record one sink event against the current request.
+
+    The event name is positional-only so a payload field may itself be called
+    `kind` (coupon.redeem, token.issue) without colliding.
+    """
     if not has_request_context():
         return
     rid = getattr(g, "_rid", None)
@@ -75,7 +79,7 @@ def emit(kind, **d):
         return
     g._seq = getattr(g, "_seq", 0) + 1
     try:
-        _Q.put_nowait(R.tap(rid, g._seq, kind, **{k: _cap(v) for k, v in d.items()}))
+        _Q.put_nowait(R.tap(rid, g._seq, _kind, **{k: _cap(v) for k, v in d.items()}))
     except queue.Full:
         pass
 

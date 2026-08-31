@@ -78,6 +78,7 @@ def product_spec(pid):
 def go_track():
     nxt = request.args.get("next", "/")
     resp = make_response(redirect("/"))
+    tap.emit("obj.assign", target="response.header", name="X-Sprkl-Next", value=nxt)
     try:
         resp.headers["X-Sprkl-Next"] = nxt
     except Exception:

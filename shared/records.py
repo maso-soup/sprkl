@@ -121,7 +121,8 @@ def ingress(rid, conn, req_line, method, target, path, query, req_headers,
     }
 
 
-def tap(rid, seq, kind, **d):
+def tap(rid, seq, kind, /, **d):
+    # `kind` is positional-only so a payload field may itself be named `kind`.
     assert kind in TAP_KINDS, f"unknown tap kind: {kind}"
     return {"v": V, "t": "tap", "ts": time.time(), "rid": rid, "seq": seq,
             "k": kind, "d": d}

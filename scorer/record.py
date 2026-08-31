@@ -6,11 +6,20 @@ evidence class is derived from its own rule rather than hand-maintained.
 import base64, ipaddress, urllib.parse
 
 
-class Event(dict):
-    """Attribute access over a tap payload; missing keys are None, not KeyError,
-    so a rule written against a field some sink does not emit is simply false."""
+class Event:
+    """Attribute access over a tap payload; missing keys are None, not KeyError.
+
+    Deliberately NOT a dict subclass: a payload field may be named `keys`,
+    `values`, `items` or `get`, which would otherwise resolve to the dict method
+    and silently break the rule.
+    """
+    __slots__ = ("_d",)
+
+    def __init__(self, d):
+        object.__setattr__(self, "_d", d)
+
     def __getattr__(self, k):
-        return self.get(k)
+        return self._d.get(k)
 
 
 class Record:
@@ -203,8 +212,16 @@ class Record:
             return False
         return any(addr in ipaddress.ip_network(c) for c in self.m["internal_cidrs"])
 
+    def _internal_target(self, e):
+        """SSRF reached internal space: by resolved IP, or by an internal-only
+        hostname the fetcher never resolved (….internal, the app origin)."""
+        if self.is_internal(e.resolved_ip):
+            return True
+        host = (e.host or "")
+        return host.endswith(".internal") or host in ("app", "scorer", "0.0.0.0")
+
     def escaped_root(self, e):
         """True if a resolved path left the root the app intended. Containment is
         a judgement, so the tap reports resolved+root and the scorer decides."""
-        resolved, root = e.get("resolved"), e.get("root")
+        resolved, root = e.resolved, e.root
         return bool(resolved and root) and not resolved.startswith(root)

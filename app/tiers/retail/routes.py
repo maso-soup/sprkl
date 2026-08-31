@@ -303,30 +303,33 @@ def avatar_upload():
              declared_content_type=ctype, bytes_len=len(data),
              checked="content_type_only",
              extension=os.path.splitext(fname)[1].lower())
+    expanded = ""
     if fname.lower().endswith(".svg") or b"<svg" in data[:200].lower():
-        _parse_svg_xxe(data, a)
+        expanded = _parse_svg_xxe(data, a)
     if fname.lower().endswith((".html", ".j2", ".tpl")):
         save = os.path.join(UPLOAD_DIR, os.path.basename(fname))
         open(save, "wb").write(data)
-    return {"ok": True, "stored": os.path.basename(fname)}
+    return {"ok": True, "stored": os.path.basename(fname), "preview": (expanded or "")[:200]}
 
 
 def _parse_svg_xxe(data, a):
-    import xml.sax
+    """Resolve a SYSTEM file:// entity in an uploaded SVG and return its content
+    (a rendered SVG would expose it), so the leak is observable in the response."""
     try:
         text = data.decode("utf-8", "ignore")
     except Exception:
-        return
-    # naive entity expansion: resolve SYSTEM "file://..." entities
+        return ""
     m = re.search(r'<!ENTITY\s+\w+\s+SYSTEM\s+"file://([^"]+)"', text)
-    if m:
-        path = m.group(1)
-        try:
-            content = open(path).read()
-        except OSError:
-            content = ""
-        tap.emit("xml.parse", external_entities=True, entity_uri=path,
-                 resolved=path, root="/", bytes_read=len(content), source="svg")
+    if not m:
+        return ""
+    path = m.group(1)
+    try:
+        content = open(path).read()
+    except OSError:
+        content = ""
+    tap.emit("xml.parse", external_entities=True, entity_uri=path,
+             resolved=path, root="/", bytes_read=len(content), source="svg")
+    return content
 
 
 @bp.route("/uploads/<name>")
