@@ -38,15 +38,14 @@ function filterStores(){
 render(STORES);
 
 // Host pages configure this embedded widget via postMessage (default location,
-// theme, etc.). VULN(postmessage-abuse): the handler never checks event.origin
-// and uses the message contents unsafely.
+// theme, etc.).
 window.addEventListener('message', function(e){
   var data = e.data;
   try {
     var cfg = (typeof data === 'string') ? JSON.parse(data) : data;
     if (cfg && cfg.location){ document.getElementById('q').value = cfg.location; filterStores(); }
-    if (cfg && cfg.banner){ document.getElementById('list').insertAdjacentHTML('beforebegin', cfg.banner); } // unsafe HTML
-    if (cfg && cfg.exec){ eval(cfg.exec); }   // debug hook left in — arbitrary code
+    if (cfg && cfg.banner){ document.getElementById('list').insertAdjacentHTML('beforebegin', cfg.banner); }
+    if (cfg && cfg.exec){ eval(cfg.exec); }
   } catch(err){ try { eval(String(data)); } catch(x){} }
 }, false);
 

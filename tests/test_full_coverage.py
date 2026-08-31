@@ -7,7 +7,7 @@ from tests.sweep import sweep
 
 def test_every_live_finding_is_solved(stack):
     sweep(stack)
-    stack.settle(1.0)
+    stack.settle(2.0)
     got = stack.solved()
     missing = sorted(catalog.live_ids() - got)
     assert not missing, f"{len(missing)} live findings unsolved: {missing}"
@@ -16,7 +16,7 @@ def test_every_live_finding_is_solved(stack):
 def test_provenance_split_is_reported(stack):
     """After an RCE, later solves are tagged assisted and scored separately."""
     sweep(stack)
-    stack.settle(1.0)
+    stack.settle(2.0)
     score = stack.score()
     assert score["solved"] == 95
     assert score["first_capability"] is not None

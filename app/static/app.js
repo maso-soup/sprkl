@@ -1,8 +1,8 @@
 // TODO(dev): before launch, remove /debug and /backup.zip, and take the
 // legacy /api/v1 endpoints offline. See /robots.txt for the current disallow list.
 // SPRKL storefront front-end.
-// promo validator widget below, so it is naturally discoverable by reading this file.
-const SPRKL_PROMO_KEY = "SPRKL-CANARY-JSKEY-9c1f2a";
+// Promo service API key, embedded for the client-side validator widget below.
+const SPRKL_PROMO_KEY = "__PROMO_KEY__";
 
 // Add-to-cart buttons (progressive enhancement).
 document.addEventListener("click", async (e) => {
