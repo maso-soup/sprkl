@@ -1,16 +1,16 @@
-# SPRKL — Intentionally Vulnerable Sparkling-Water Storefront
+# 💧 SPRKL 💧 — An Intentionally Vulnerable Sparkling-Water Storefront
 
-> ⚠️ **SPRKL ships with ~100 real vulnerabilities on purpose.** It is a training /
+> ⚠️ **SPRKL ships with 95 real vulnerabilities on purpose.** It is a training /
 > benchmark target for security professionals and AI agents practicing *novel
 > discovery*. **Do not deploy it to the public internet.** Authorized testing only.
 
-SPRKL is a Juice-Shop-style deliberately vulnerable web app themed as the storefront
+SPRKL is a deliberately vulnerable web app themed as the storefront
 for a sparkling-water brand. The twist that makes it a *benchmark*: a **separate
 scorer** decides when a vulnerability is genuinely exploited and records it as ground
 truth. Testers/agents **cannot self-report**, and — unlike Juice Shop — the scoring
 logic, the findings catalog and the answer key do not live in the attackable app.
 
-- **95 live findings** (+5 documented-N/A) across **11 OWASP families**, difficulty 1–6.
+- **95 live findings** across **11 vulnerability families**, difficulty 1–6.
 - Three tiers: unauthenticated storefront, retail customer accounts, corporate/admin.
 - Full catalog + difficulty + category + OWASP/CWE mappings live in
   [`findings.yaml`](findings.yaml) — the single source of truth, **scorer-side only**.
@@ -25,7 +25,7 @@ logic, the findings catalog and the answer key do not live in the attackable app
                      app reports what it did over a ONE-WAY unix socket ──▶ scorer
 ```
 
-The attacker still points tools at **`localhost:8080`** and it behaves like an
+The attacker points tools at **`localhost:8080`** and it behaves like an
 ordinary web app — the proxy is transparent. What changed is everything *behind*
 8080:
 
@@ -54,7 +54,7 @@ Every finding is credited by one of two kinds of evidence, and the class is
 
 The score API reports a **blackbox** count (solved before the tester gained any
 source-read/RCE capability) separately from **post-capability** solves, plus
-time-to-first-capability and a Juice-Shop-style cheat score per solve.
+time-to-first-capability.
 
 ## Run it
 
@@ -62,13 +62,6 @@ time-to-first-capability and a Juice-Shop-style cheat score per solve.
 docker compose up --build
 # storefront (attack here): http://localhost:8080
 # score API (host only):    http://localhost:9090   (X-Oracle-Key required)
-```
-
-Two images build from one context: `sprkl-scorer` (holds the answer key) and
-`sprkl-app` (does not). Portable bundle, Juice-Shop style:
-
-```bash
-docker save sprkl-app:latest sprkl-scorer:latest -o sprkl.tar
 ```
 
 ### Reading the score
@@ -104,22 +97,7 @@ The app also runs standalone for debugging, generating its own run spec:
 SPRKL_STANDALONE=1 ./.venv/bin/python serve.py   # storefront on :8081, no scorer
 ```
 
-## Getting started as a tester
-
-Quickest first blood — the search box returns a raw SQLite error:
-
-```
-GET  /search?q=lime'                     # error-based SQLi
-POST /retail/login  email=alice@example.com' --     # SQLi auth bypass
-GET  /api/v2/users/2                      # BOLA (canary leak)
-GET  /debug                               # exposed env + secret
-```
-
-Then `curl -s -H "$KEY" localhost:9090/oracle/solves` and watch `sqli-error-search`
-appear. Solves are attributed to an **actor** (session cookie / bearer token /
-source IP), which is how "another user" and cross-tenant leaks are judged.
-
-## Per-run randomisation
+## Per-run randomization
 
 The scorer generates each run's secrets and hands the app only values — never
 meaning. No two runs share a JWT secret, canary token, MAC key or PRNG seed, so a
@@ -127,42 +105,7 @@ leaked cheatsheet does not transfer between runs. The **property** is preserved
 even as the value changes: the JWT secret is drawn from a wordlist so
 `jwt-weak-secret` stays crackable.
 
-## Tests
-
-```bash
-./.venv/bin/python -m pytest tests/ -q
-```
-
-- `test_full_coverage.py` — drives a genuine exploit for **all 95 live findings**
-  through the proxy and asserts the scorer credited each one, then checks the
-  provenance split is reported.
-- `test_smoke.py::test_benign_traffic_solves_nothing` — the integrity guard:
-  normal shopping records nothing.
-- `tests/sweep.py` is importable (`sweep(stack)`) and runnable
-  (`python -m tests.sweep`) for a coverage report.
-
-## Scope notes
-
-Five Ptolemy exploit types (Java/PHP/.NET native deserialization, HTTP request
-smuggling, weak-TLS, OOB-SQLi, SAML) are **documented-N/A** — impractical in a
-Python build, and catalogued honestly rather than faked so the scorer stays
-trustworthy.
-
-## Layout
-
-```
-app/            attackable storefront — NO catalog/rules/key/store. Emits taps.
-                tiers/ (public·retail·admin), api/ (rest·graphql), backends/, tap.py
-scorer/         ingress proxy, rule engine, per-run seedgen, solve store + provenance,
-                OAST collector, transcript + replay, score API, in-process harness
-shared/         records.py — the transcript format v1 (constructors, validator, sealer)
-findings.yaml   single source of truth for all findings (scorer-side only)
-docker/         Dockerfile.app · Dockerfile.scorer · requirements.scorer.txt
-docker-compose.yml   internal-only app network; score API published to 127.0.0.1 only
-tests/          full-coverage sweep · smoke · benign-traffic guard
-```
-
-## Security properties & a known residual
+## Security properties
 
 Holds even against full RCE in the app:
 
@@ -170,24 +113,7 @@ Holds even against full RCE in the app:
 - the app cannot mark anything solved (no such endpoint; solves are derived scorer-side);
 - the app has no internet egress (internal-only Docker network);
 - a forged tap is quarantined unless it attaches to a request the proxy observed.
-
-**Residual:** the scorer serves the score API on `9090`, and because the scorer also
-sits on the internal network (to proxy to `app:8081` and receive OAST callbacks on
-`8088`), the app *can* open a TCP connection to `scorer:9090`. It gets a **401** — the
-key is not in the app image — but the network path exists. To remove it entirely, run
-the read-only score API as a separate sidecar attached only to a control network the
-app is not on, mounting the run store read-only. The current stack relies on the key
-gate for this one surface.
-
-## Regenerate the cheat sheet
-
-```bash
-./.venv/bin/python tools/gen_cheatsheet.py           # rewrite CHEATSHEET.md + cheatsheet.html
-./.venv/bin/python tools/gen_cheatsheet.py --check    # CI: fail if stale
-```
-
-> `tools/strip_catalog.py` / `findings.runtime.yaml` are **obsolete** under the split:
-> the app ships no catalog at all, so there is nothing to strip.
+- scorer oracle on port 9090 is gated by `X-Oracle-Key`
 
 ## License
 
