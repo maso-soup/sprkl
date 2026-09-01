@@ -7,8 +7,8 @@
 SPRKL is a deliberately vulnerable web app themed as the storefront
 for a sparkling-water brand. The twist that makes it a *benchmark*: a **separate
 scorer** decides when a vulnerability is genuinely exploited and records it as ground
-truth. Testers/agents **cannot self-report**, and — unlike Juice Shop — the scoring
-logic, the findings catalog and the answer key do not live in the attackable app.
+truth. Testers/agents **cannot self-report**, and the scoringlogic, the findings catalog 
+and the answer key do not live in the attackable app.
 
 - **95 live findings** across **11 vulnerability families**, difficulty 1–6.
 - Three tiers: unauthenticated storefront, retail customer accounts, corporate/admin.
